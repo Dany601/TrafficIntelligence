@@ -77,10 +77,10 @@ def procesar_dashboard(k_usuario):
         scaler = StandardScaler()
         X_scaled = scaler.fit_transform(X)
 
-        # MÉTODO DEL CODO 
+        # MÉTODO DEL CODO — n_init=3 para la exploración (no requiere precisión máxima)
         wcss = []
         for i in range(1, 11):
-            km = KMeans(n_clusters=i, init='k-means++', random_state=42, n_init=10)
+            km = KMeans(n_clusters=i, init='k-means++', random_state=42, n_init=3)
             km.fit(X_scaled)
             wcss.append(int(km.inertia_))
 
@@ -107,22 +107,22 @@ def procesar_dashboard(k_usuario):
             border=0
         )
 
-        # 2. TABLA DE RESULTADOS (Con Clústeres): Mostramos todo
-        # Seleccionamos solo las columnas más importantes para que se vea bien en el scroll
+        # 2. TABLA DE RESULTADOS (Con Clústeres): Muestra representativa de 50 registros
         columnas_res = ['Fecha incidente', 'Hora', 'Localidad', 'Total_Implicados', 'Cluster_Label']
-        tabla_resultados_html = df_clean[columnas_res].sample(n=min(2000, len(df_clean))).to_html(
-            classes='table table-hover align-middle m-0', 
-            index=False, 
+        tabla_resultados_html = df_clean[columnas_res].sample(n=min(50, len(df_clean)), random_state=42).to_html(
+            classes='table table-hover align-middle m-0',
+            index=False,
             border=0
         )
 
-        # Gráfica Clústeres 
+        # Gráfica Clústeres — muestreo para rendimiento
         orden_leyenda = [f'Grupo {i}' for i in range(k_usuario)]
-        jitter_x = df_clean['Hora_Num'] + np.random.uniform(-0.3, 0.3, len(df_clean))
-        jitter_y = df_clean['Total_Implicados'] + np.random.uniform(-0.1, 0.1, len(df_clean))
+        df_plot = df_clean.sample(n=min(500, len(df_clean)), random_state=42)
+        jitter_x = df_plot['Hora_Num'] + np.random.uniform(-0.3, 0.3, len(df_plot))
+        jitter_y = df_plot['Total_Implicados'] + np.random.uniform(-0.1, 0.1, len(df_plot))
 
         plt.figure(figsize=(10, 6))
-        sns.scatterplot(x=jitter_x, y=jitter_y, hue=df_clean['Cluster_Label'], 
+        sns.scatterplot(x=jitter_x, y=jitter_y, hue=df_plot['Cluster_Label'],
                         hue_order=orden_leyenda, palette='tab10', s=80, alpha=0.7)
         plt.title(f'Visualización de Clústeres (K={k_usuario})')
         plt.legend(bbox_to_anchor=(1.05, 1), loc='upper left')
@@ -130,8 +130,9 @@ def procesar_dashboard(k_usuario):
 
         # CENTROIDES
         centroids = scaler.inverse_transform(kmeans_final.cluster_centers_)
+        df_plot_c = df_clean.sample(n=min(500, len(df_clean)), random_state=42)
         plt.figure(figsize=(10, 6))
-        plt.scatter(df_clean['Hora_Num'], df_clean['Total_Implicados'], c='lightgray', s=30, alpha=0.3)
+        plt.scatter(df_plot_c['Hora_Num'], df_plot_c['Total_Implicados'], c='lightgray', s=30, alpha=0.3)
         plt.scatter(centroids[:, 0], centroids[:, 1], c='red', marker='*', s=350, edgecolor='black', label='Centroides')
         plt.title('Localización de Centroides')
         img_centroide = fig_to_base64(plt)
