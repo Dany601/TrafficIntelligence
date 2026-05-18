@@ -1,0 +1,187 @@
+<section id="orange">
+
+    <div class="text-center mb-5">
+        <span class="badge bg-primary-subtle text-primary px-3 py-2 rounded-pill mb-2 fw-bold">Orange Data Mining Suite</span>
+        <h2 class="fw-bold display-5 text-dark">Modelamiento Estadístico e <span class="text-primary">Inteligencia de Tráfico</span></h2>
+        <p class="text-muted mx-auto" style="max-width: 800px;">
+            Segmentación geoespacial con k-Means, análisis multidimensional de incidentes y validación predictiva mediante Random Forest.
+        </p>
+    </div>
+
+    <div class="container mb-5">
+        <div class="row">
+            
+            <div class="col-lg-7">
+                
+                <div class="card card-analysis">
+                    <div class="card-header-custom d-flex align-items-center">
+                        <i class="fa-solid fa-diagram-project text-warning me-3 fa-lg"></i>
+                        <h2 class="h5 mb-0 text-uppercase fw-bold">Estructura del Pipeline en Orange</h2>
+                    </div>
+                    <div class="card-body p-4">
+                        <p class="text-muted">Para automatizar la extracción de valor de nuestra bitácora de incidentes, implementamos un flujo de procesamiento híbrido (supervisado y no supervisado) mediante programación visual. Este pipeline garantiza la transformación de registros crudos en patrones predictivos estables:</p>
+                        
+                        <div class="pipeline-step">
+                            <h4 class="h6 fw-bold text-primary">1. Ingesta e Ingeniería de Variables (`File` -> `Formula`)</h4>
+                            <p class="small text-muted mb-2">Se realiza la lectura de la bitácora base mediante el nodo <strong>File</strong>. Inmediatamente se conecta al widget <strong>Formula</strong> para calcular y derivar nuevos atributos analíticos intermedios que optimizan la interpretación temporal del riesgo.</p>
+                        </div>
+
+                        <div class="pipeline-step">
+                            <h4 class="h6 fw-bold text-primary">2. Ajuste del Dominio Lógico (`Select Columns` -> `Edit Domain`)</h4>
+                            <p class="small text-muted mb-2">Filtrado selectivo de características para delimitar el alcance del modelo. Con <strong>Edit Domain</strong> se ajustan las propiedades de las variables, tipificando los factores categóricos (localidades, tipos de incidente) y numéricos (horas limpias, cantidades) para el cálculo de distancias.</p>
+                        </div>
+
+                        <div class="pipeline-step">
+                            <h4 class="h6 fw-bold text-primary">3. Agrupamiento Euclídeo Estructurado (`k-Means`)</h4>
+                            <p class="small text-muted mb-2">Segmentación particional no supervisada que descubre los patrones de riesgo intrínsecos de la ciudad de forma autónoma. El comportamiento de los grupos se valida en paralelo mediante histogramas en <strong>Distributions</strong> y dispersiones espaciales en <strong>Scatter Plot</strong>.</p>
+                        </div>
+
+                        <div class="pipeline-step">
+                            <h4 class="h6 fw-bold text-primary">4. Muestreo y Clasificación (`Data Sampler` -> `Random Forest`)</h4>
+                            <p class="small text-muted mb-0">Ruptura y particionamiento probabilístico del dataset. Se extrae una muestra de entrenamiento para alimentar el algoritmo de ensamble <strong>Random Forest</strong>, cuya capacidad de generalización se evalúa rigurosamente mediante validación cruzada en <strong>Test and Score</strong> y matrices de confusión.</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card card-analysis">
+                    <div class="card-header-custom d-flex align-items-center">
+                        <i class="fa-solid fa-graduation-cap text-primary me-3 fa-lg"></i>
+                        <h2 class="h5 mb-0 text-uppercase fw-bold">Sustento Técnico: CRISP-DM y Analítica Predictiva</h2>
+                    </div>
+                    <div class="card-body p-4">
+                        <p class="small text-muted text-justify">
+                            El desarrollo de la plataforma <strong>Bogotá Traffic Intelligence</strong> se rige bajo la metodología estandarizada <strong>CRISP-DM</strong> (<em>Cross-Industry Standard Process for Data Mining</em>). Durante las fases de Comprensión y Preparación de los Datos de la bitácora, determinamos que el análisis convencional de frecuencias era insuficiente para predecir escenarios críticos multivariables.
+                        </p>
+                        <p class="small text-muted text-justify">
+                            Al unificar un enfoque de aprendizaje no supervisado (<strong>k-Means</strong>) con uno supervisado (<strong>Random Forest</strong>), el pipeline adquiere una robustez única. El clustering agrupa las franjas horarias y los sectores con perfiles de riesgo homólogos (cohesión espacial), mientras que los árboles de decisión aprenden de esa estructura para clasificar de manera automatizada futuros incidentes según su localidad de origen.
+                        </p>
+                    </div>
+                </div>
+
+                <div class="card card-analysis">
+                    <div class="card-header-custom d-flex align-items-center">
+                        <i class="fa-solid fa-chart-pie text-success me-3 fa-lg"></i>
+                        <h2 class="h5 mb-0 text-uppercase fw-bold">Interpretación de Hallazgos Analíticos</h2>
+                    </div>
+                    <div class="card-body p-4">
+                        <p class="text-muted small">Al procesar las métricas de rendimiento y validación dentro del entorno analítico de Orange, logramos segmentar y evaluar el comportamiento operativo de la accidentalidad vial de la siguiente forma:</p>
+                        
+                        <div class="row mt-3 mb-4">
+                            <div class="col-md-6 mb-3">
+                                <div class="metric-box">
+                                    <div class="metric-value">Silhouette Plot</div>
+                                    <div class="small fw-bold text-dark mt-1">Análisis de Cohesión Inter-Clúster</div>
+                                    <p class="small text-muted mb-0 mt-2">La evaluación del coeficiente de silueta mide la calidad del agrupamiento euclidiano. Perfiles con barras homogéneas confirman que las localidades asignadas a un grupo comparten densidades temporales de incidentes muy similares.</p>
+                                </div>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <div class="metric-box" style="background-color: #e8f5e9; border-color: #c8e6c9;">
+                                    <div class="metric-value" style="color: #2e7d32;">Test and Score</div>
+                                    <div class="small fw-bold text-dark mt-1">Métricas de Clasificación Predictiva</div>
+                                    <p class="small text-muted mb-0 mt-2">La validación cruzada del modelo Random Forest permite auditar los índices de precisión (Precision), sensibilidad (Recall) y la puntuación F1, garantizando que el algoritmo identifica patrones reales y evita el sobreajuste.</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <h3 class="h6 fw-bold text-primary mb-2"><i class="fa-solid fa-magnifying-glass-chart me-2"></i>Evaluación de Distancias y Matrices de Confusión</h3>
+                        <p class="text-muted small text-justify mb-4">
+                            El desempeño final del modelo predictivo se valida cruzando los valores reales contra las predicciones del algoritmo en la matriz de confusión. Esto permite georreferenciar qué cuadrantes urbanos exhiben desviaciones estadísticas o falsos positivos altos, aislando las zonas donde las variables externas (como el estado de la infraestructura o la falta de señalización) alteran de forma imprevista el comportamiento normal del tráfico.
+                        </p>
+                        
+                        <div class="row g-3">
+                            <div class="col-6">
+                                <div class="img-container">
+                                    <img src="{{ url_for('static', filename='img/4.png') }}" alt="Métrica 8">
+                                    <div class="img-caption text-center p-2 font-monospace" style="font-size:0.75rem;">
+                                        <strong>Gráfico 4:</strong> Scatter Plot multidimensional enfocado en las distancias inter-clúster.
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-6">
+                                <div class="img-container">
+                                    <img src="{{ url_for('static', filename='img/10.png') }}" alt="Métrica 9">
+                                    <div class="img-caption text-center p-2 font-monospace" style="font-size:0.75rem;">
+                                        <strong>Matriz 10:</strong> Matriz de confusión lógica y asignación de pesos de cohesión predictiva.
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-lg-5">
+                <div class="card card-analysis">
+                    <div class="card-header-custom d-flex align-items-center">
+                        <i class="fa-regular fa-images text-danger me-3 fa-lg"></i>
+                        <h2 class="h5 mb-0 text-uppercase fw-bold">Evidencias del Modelo (Orange)</h2>
+                    </div>
+                    <div class="card-body p-4">
+                        <p class="text-muted small">Registro visual del flujo lógico de nodos configurado en el lienzo de Orange y las gráficas estadísticas resultantes del modelado:</p>
+
+                        <div class="mb-4">
+                            <div class="img-container">
+                                <img src="{{ url_for('static', filename='img/1.png') }}" alt="Pipeline General de Orange">
+                                <div class="img-caption fw-semibold text-center">
+                                    <i class="fa-solid fa-network-wired me-2"></i>Figura 1: Lienzo General y Conexión de Nodos del Pipeline
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="mb-4">
+                            <div class="img-container">
+                                <img src="{{ url_for('static', filename='img/2.png') }}" alt="Distribución de Frecuencias">
+                                <div class="img-caption fw-semibold text-center">
+                                    <i class="fa-solid fa-chart-column me-2"></i>Figura 2: Histograma de Frecuencias e Histogramas de Distribución
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="mb-4">
+                            <div class="img-container">
+                                <img src="{{ url_for('static', filename='img/3.png') }}" alt="Scatter Plot Base">
+                                <div class="img-caption fw-semibold text-center">
+                                    <i class="fa-solid fa-circle-dot me-2"></i>Figura 3: Gráfico de Dispersión Base para Atributos Continuos
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="mb-4">
+                            <div class="img-container">
+                                <img src="{{ url_for('static', filename='img/4.png') }}" alt="Scatter Plot Segmentado">
+                                <div class="img-caption fw-semibold text-center">
+                                    <i class="fa-solid fa-table-cells me-2"></i>Figura 4: Mapeo Multidimensional de Intersecciones y Variables
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="mb-4">
+                            <div class="img-container">
+                                <img src="{{ url_for('static', filename='img/5.png') }}" alt="Silhouette Plot">
+                                <div class="img-caption fw-semibold text-center">
+                                    <i class="fa-solid fa-chart-gantt me-2"></i>Figura 5: Gráfico de Siluetas para Cohesión e Coeficientes Clúster
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="mb-4">
+                            <div class="img-container">
+                                <img src="{{ url_for('static', filename='img/9.png') }}" alt="Test and Score Results">
+                                <div class="img-caption fw-semibold text-center">
+                                    <i class="fa-solid fa-square-poll-vertical me-2"></i>Figura 10: Rendimiento del Algoritmo y Métricas de Evaluación
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="alert alert-info py-2 px-3 small mb-0" role="alert">
+                            <i class="fa-solid fa-circle-info me-2"></i> Todos los gráficos expuestos se actualizan dinámicamente según las variaciones estructurales detectadas en la ingesta del dataset de tráfico urbano. Esta integración adaptativa asegura que cualquier recalibración en los parámetros de los algoritmos se refleje inmediatamente en los paneles.
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+</section>

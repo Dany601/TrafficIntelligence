@@ -18,14 +18,13 @@
         <div class="container">
             <a class="navbar-brand fw-bold" href="#inicio">Bogotá Traffic Intelligence</a>
             <div class="navbar-nav ms-auto">
-                <a class="nav-link" href="#descripcion">Problemática</a>
-                <a class="nav-link" href="#dataset">Dataset</a>
-                <a class="nav-link" href="#concepto">Conceptos K-means</a>
-                <a class="nav-link" href="#modelo">Modelo</a>
-                <a class="nav-link" href="#cluster">Clusters</a>
-                <a class="nav-link" href="#centroide">Centroides</a>
-                <a class="nav-link" href="#metodo">Metodo del Codo</a>
-                <a class="nav-link" href="#resultados">Resultados</a>
+                    <a class="nav-link" href="#descripcion">Problemática</a>
+                    <a class="nav-link" href="#dataset">Dataset</a>
+                    <a class="nav-link" href="#analisis">Análisis</a>
+                    <a class="nav-link" href="#orange">Orange</a>
+                    <a class="nav-link" href="#multidimensional">Modelo Multidimensional</a>
+                    <a class="nav-link" href="#kmeans">k-means</a>
+                   
             </div>
         </div>
     </nav>
@@ -33,13 +32,20 @@
     {% include 'inicio.html' %}
     {% include 'descripcion.html' %}
     {% include 'dataset.html' %}
+    {% include 'analisis.html' %}
+    {% include 'orange.html' %}
+    {% include 'multidimensional.html' %}   
+
+    <div id="kmeans">
     {% include 'concepto.html' %}
     {% include 'modelo.html' %}
     {% include 'cluster.html' %}
     {% include 'centroide.html' %}
     {% include 'metodo.html' %}
     {% include 'resultados.html' %}
+    </div>
 
+    
     <section class="py-5 text-white" style="background: linear-gradient(90deg, #0f172a 0%, #1e293b 100%);">
         <div class="container text-center">
             <h2 class="fw-bold mb-3">Bogotá Traffic Intelligence</h2>
@@ -67,10 +73,9 @@
                     <h6 class="fw-bold mb-4 text-uppercase small" style="letter-spacing: 1px;">Secciones</h6>
                     <ul class="list-unstyled small opacity-75">
                         <li class="mb-2"><a href="#inicio" class="text-white text-decoration-none hover-link">Inicio</a></li>
-                        <li class="mb-2"><a href="#metodo" class="text-white text-decoration-none hover-link">Método del Codo</a></li>
-                        <li class="mb-2"><a href="#modelo" class="text-white text-decoration-none hover-link">Ejecución Modelo</a></li>
-                        <li class="mb-2"><a href="#cluster" class="text-white text-decoration-none hover-link">Visualización</a></li>
-                        <li class="mb-2"><a href="#resultados" class="text-white text-decoration-none hover-link">Conclusiones</a></li>
+                        <li class="mb-2"><a href="#kmeans" class="text-white text-decoration-none hover-link">K-Means</a></li>
+                       
+                    
                     </ul>
                 </div>
 
