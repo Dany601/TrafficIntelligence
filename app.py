@@ -22,7 +22,6 @@ app = Flask(__name__)
 
 # Configuración del Dataset
 URL_GITHUB = "https://raw.githubusercontent.com/Dany601/Datasets901/refs/heads/main/incidentes.csv"
-
 df_cache = None
 
 COLS_DISPLAY = ['Fecha incidente', 'Hora', 'Localidad', 'Total_Implicados']
@@ -67,6 +66,8 @@ def obtener_datos():
             return None
     return df_cache
 
+
+
 def fig_to_base64(plt_obj):
     buf = io.BytesIO()
     plt_obj.savefig(buf, format='png', bbox_inches='tight', transparent=True, dpi=72)
@@ -88,7 +89,7 @@ def procesar_dashboard(k_usuario):
         X_scaled = scaler.fit_transform(X).astype('float32')
         del X
 
-        # MÉTODO DEL CODO — n_init=3 para la exploración (no requiere precisión máxima)
+        # MÉTODO DEL CODO 
         wcss = []
         for i in range(1, 11):
             km = KMeans(n_clusters=i, init='k-means++', random_state=42, n_init=3)
@@ -104,7 +105,7 @@ def procesar_dashboard(k_usuario):
         plt.legend()
         img_metodo = fig_to_base64(plt)
 
-        # K-MEANS FINAL
+        # K-MEANS 
         kmeans_final = KMeans(n_clusters=k_usuario, init='k-means++', max_iter=300, random_state=42, n_init=10)
         cluster_ids = kmeans_final.fit_predict(X_scaled)
         cluster_labels = np.array([f'Grupo {x}' for x in cluster_ids])
@@ -128,7 +129,7 @@ def procesar_dashboard(k_usuario):
         )
         del df_muestra
 
-        # Gráfica Clústeres — 500 puntos muestreados
+        # Gráfica Clústeres — 500 muestras
         orden_leyenda = [f'Grupo {i}' for i in range(k_usuario)]
         idx_plot = np.random.default_rng(42).choice(len(df_clean), size=min(500, len(df_clean)), replace=False)
         hora_plot = np.asarray(df_clean['Hora_Num'].values[idx_plot], dtype='float32')
@@ -185,15 +186,75 @@ def procesar_dashboard(k_usuario):
         print(f"LOG: Error: {e}")
         return None
 
+def obtener_datos():
+    global df_cache
+    if df_cache is None:
+        try:
+            print("LOG: Descargando dataset desde GitHub...")
+            headers = {'User-Agent': 'Mozilla/5.0'}
+            response = requests.get(URL_GITHUB, headers=headers, timeout=15)
+            response.raise_for_status()
+
+            df = pd.read_csv(io.StringIO(response.text), delimiter=';', on_bad_lines='skip', low_memory=False)
+            df.columns = [c.strip() for c in df.columns]
+
+            # Limpieza de cantidades
+            cols_cant = [c for c in df.columns if c.startswith('Cant')]
+            for col in cols_cant:
+                df[col] = pd.to_numeric(df[col], errors='coerce').fillna(0)
+            df['Total_Implicados'] = df[cols_cant].sum(axis=1)
+
+            # Procesamiento de Hora
+            col_hora = 'Hora' if 'Hora' in df.columns else 'HORA'
+            hora_dt = pd.to_datetime(df[col_hora], format='%H:%M', errors='coerce')
+            hora_dt = hora_dt.fillna(pd.to_datetime(df[col_hora], format='%H:%M:%S', errors='coerce'))
+            df['Hora_Num'] = hora_dt.dt.hour.astype('float32')
+            df['Total_Implicados'] = df['Total_Implicados'].astype('float32')
+
+            # --- CORRECCIÓN CRÍTICA ---
+            # Eliminamos la línea que filtraba las columnas (cols_keep). 
+            # Ahora el dataframe conserva las 23 variables originales.
+            df = df.dropna(subset=['Hora_Num', 'Total_Implicados'])
+            df = df[df['Total_Implicados'] > 0]
+
+            df_cache = df
+            gc.collect()
+            print(f"LOG: Datos cargados ({len(df)} registros con todas sus columnas).")
+        except Exception as e:
+            print(f"LOG: Error crítico: {e}")
+            return None
+    return df_cache
+
 @app.route('/')
 def index():
     k_val = request.args.get('k', default=5, type=int)
     if k_val < 1: k_val = 1
     if k_val > 10: k_val = 10
     
+    df = obtener_datos()
+    dashboard_data = procesar_dashboard(k_val)
+    
+    if df is not None and dashboard_data:
+        # Aquí capturamos las 23 columnas reales del CSV
+        columnas_reales = df.columns.tolist()
+        filas_reales = df.head(50).values.tolist()
+        
+        return render_template(
+            'index.html', 
+            d=dashboard_data, 
+            current_k=k_val,
+            columnas=columnas_reales, 
+            filas=filas_reales
+        )
+    return "Error al procesar datos."
+def kmeans():
+    k_val = request.args.get('k', default=5, type=int)
+    if k_val < 1: k_val = 1
+    if k_val > 10: k_val = 10
+    
     dashboard_data = procesar_dashboard(k_val)
     if dashboard_data:
-        return render_template('index.html', d=dashboard_data, current_k=k_val)
+        return render_template('kmeans.html', d=dashboard_data, current_k=k_val)
     return "Error al procesar datos."
 
 if __name__ == '__main__':

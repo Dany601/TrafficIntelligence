@@ -514,3 +514,176 @@
   width: 50px;
   margin-bottom: 20px;
 }
+.tabla-container {
+    background: white;
+    padding: 20px;
+    border-radius: 20px;
+}
+.tabla-scroll {
+    overflow-x: auto;
+}
+
+.tabla-dataset {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+
+/* ==========================================================================
+   Bogotá Traffic Intelligence - Estilos Globales y Variables
+   ========================================================================== */
+:root {
+    --primary-color: #2c3e50;
+    --accent-orange: #e67e22;
+    --light-bg: #f8f9fa;
+    --dark-muted: #7f8c8d;
+    --card-shadow: 0 6px 18px rgba(0, 0, 0, 0.05);
+    --hover-shadow: 0 12px 24px rgba(0, 0, 0, 0.12);
+    --border-radius-lg: 12px;
+    --border-radius-sm: 8px;
+}
+
+body {
+    background-color: var(--light-bg);
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    color: var(--primary-color);
+    line-height: 1.6;
+}
+
+/* ==========================================================================
+   Sección Hero (Encabezado principal)
+   ========================================================================== */
+.hero-section {
+    background: linear-gradient(135deg, #fdfdfd 0%, #ffffff 100%);
+    color: rgb(5, 5, 5);
+    padding: 60px 0;
+    margin-bottom: 40px;
+    box-shadow: 0 4px 15px rgba(0, 5, 81, 0.1);
+}
+
+.badge-orange {
+    background-color: #0045f5;
+    color: white;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+
+/* ==========================================================================
+   Tarjetas de Análisis (Cards)
+   ========================================================================== */
+.card-analysis {
+    border: none;
+    border-radius: var(--border-radius-lg);
+    box-shadow: var(--card-shadow);
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+    background: white;
+    margin-bottom: 30px;
+}
+
+.card-analysis:hover {
+    transform: translateY(-5px);
+    box-shadow: var(--hover-shadow);
+}
+
+.card-header-custom {
+    background-color: transparent;
+    border-bottom: 2px solid var(--light-bg);
+    padding: 20px;
+    font-weight: 700;
+}
+
+/* ==========================================================================
+   Flujo del Pipeline (Pasos a la izquierda)
+   ========================================================================== */
+.pipeline-step {
+    border-left: 4px solid var(--accent-orange);
+    padding-left: 15px;
+    margin-bottom: 25px;
+    transition: border-color 0.2s ease;
+}
+
+.pipeline-step:hover {
+    border-left-color: #d35400; /* Naranja un poco más oscuro al pasar el mouse */
+}
+
+.pipeline-step h4 {
+    margin-bottom: 5px;
+}
+
+/* ==========================================================================
+   Contenedores de Imágenes (Galería Derecha)
+   ========================================================================== */
+.img-container {
+    position: relative;
+    border-radius: var(--border-radius-sm);
+    overflow: hidden;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+    background: #fff;
+    padding: 10px;
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.img-container:hover {
+    transform: scale(1.01);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+}
+
+.img-container img {
+    width: 100%;
+    height: auto;
+    display: block;
+    border-radius: 4px;
+}
+
+.img-caption {
+    background: rgba(44, 62, 80, 0.95);
+    color: white;
+    padding: 10px 12px;
+    font-size: 0.85rem;
+    border-radius: 0 0 6px 6px;
+    margin-top: 10px;
+}
+
+/* ==========================================================================
+   Métricas y Bloques de Clústeres
+   ========================================================================== */
+.metric-box {
+    background: #fff3e0;
+    border: 1px solid #ffe0b2;
+    border-radius: var(--border-radius-sm);
+    padding: 20px;
+    text-align: center;
+    height: 100%; /* Asegura que tengan la misma altura si están en una fila */
+    transition: background-color 0.3s ease;
+}
+
+.metric-value {
+    font-size: 1.8rem;
+    font-weight: 700;
+    color: var(--accent-orange);
+    margin-bottom: 5px;
+}
+.alert-info {
+    border-radius: var(--border-radius-sm);
+    border: 1px solid #bce5f6;
+}
+.dashboard-wrapper { transition: transform 0.3s ease; background: #fff; }
+    .dashboard-wrapper:hover { transform: translateY(-5px); }
+    .kpi-card { transition: all 0.3s ease; }
+    .kpi-card:hover { transform: scale(1.03); box-shadow: 0 10px 20px rgba(0,0,0,0.1)!important; }
+    .bg-primary-subtle { background-color: #eef2ff!important; }
+    .bg-danger-subtle { background-color: #fef2f2!important; }
+    .accordion-button:not(.collapsed) { background-color: #f8faff; color: #3b82f6; }
+    .col-xl-2\.4 { width: 20%; }
+    .col-xl-2\.8 { width: 20%; }
+    pre { font-family: 'Courier New', Courier, monospace; overflow-x: auto; }
+    .table th { font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; font-size: 0.8rem; }
+    .table-danger-subtle { background-color: #ffeeef!important; }
+    .table-warning-subtle { background-color: #fffbeb!important; }
+    @media (max-width: 1200px) {
+        .col-xl-2\.4, .col-xl-2\.8 { width: 50%; }
+    }
+    @media (max-width: 768px) {
+        .col-xl-2\.4, .col-xl-2\.8 { width: 100%; }
+    }

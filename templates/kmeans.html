@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bogotá Traffic Intelligence</title>
+    <link rel="icon" type="image/png" href="{{ url_for('static', filename='img/logo.png') }}">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+
+    <!-- Navbar simplificada para esta sección -->
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark sticky-top">
+        <div class="container">
+            <a class="navbar-brand fw-bold" href="/">← Volver al Inicio</a>
+        </div>
+    </nav>
+
+    <div class="container py-4">
+        <h1 class="text-center fw-bold mb-5">Análisis Técnico K-Means</h1>
+        
+        <!-- Unión de las secciones solicitadas -->
+        {% include 'concepto.html' %}
+        {% include 'modelo.html' %}
+        {% include 'cluster.html' %}
+        {% include 'centroide.html' %}
+        {% include 'metodo.html' %}
+        {% include 'resultados.html' %}
+    </div>
+
+    <footer class="py-4 bg-light mt-5">
+        <div class="container text-center">
+            <p class="text-muted small">Bogotá Traffic Intelligence - Módulo de Machine Learning</p>
+        </div>
+    </footer>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

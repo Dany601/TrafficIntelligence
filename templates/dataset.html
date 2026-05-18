@@ -1,10 +1,17 @@
-<section id="dataset" class="full-screen bg-light">
-    <div class="container">
-        <h2 class="section-title text-center mb-5">Exploración del Dataset</h2>
-        
+<section id="dataset" class="py-5 bg-light">
+    <div class="container-fluid px-4">
+        <!-- Título de la Sección -->
+        <div class="text-center mb-5">
+            <h2 class="fw-bold display-6">Exploración del Dataset</h2>
+            <p class="text-muted mx-auto" style="max-width: 700px;">
+                Visualización detallada de las 23 variables originales del registro de incidentes viales en Bogotá y las variables estratégicas seleccionadas para el modelo.
+            </p>
+        </div>
+
+        <!-- Fila de Tarjetas Informativas -->
         <div class="row g-4 mb-5">
             <div class="col-md-6">
-                <div class="info-card-equal shadow-sm bg-white p-5 rounded-4 h-100">
+                <div class="info-card-equal shadow-sm bg-white p-5 rounded-4 h-100 border-0">
                     <div class="text-center mb-4">
                         <img src="https://cdn-icons-png.flaticon.com/512/2830/2830305.png" alt="Movilidad" width="60">
                     </div>
@@ -15,9 +22,9 @@
                     </p>
                     
                     <div class="d-flex flex-wrap gap-2 mt-4 justify-content-center">
-                        <span class="badge rounded-pill bg-primary-soft">📅 Fecha</span>
-                        <span class="badge rounded-pill bg-primary-soft">📍 Localidad</span>
-                        <span class="badge rounded-pill bg-primary-soft">📊 Cantidad</span>
+                        <span class="badge rounded-pill bg-primary px-3 py-2">📅 Fecha</span>
+                        <span class="badge rounded-pill bg-primary px-3 py-2">📍 Localidad</span>
+                        <span class="badge rounded-pill bg-primary px-3 py-2">📊 Cantidad</span>
                     </div>
 
                     <div class="mt-5 text-start">
@@ -30,18 +37,19 @@
                                 <strong>Localidad:</strong> Permite la segmentación geográfica de los incidentes.
                             </li>
                             <li class="list-group-item bg-transparent px-0 border-light" style="text-align: justify;">
-                                <strong>Tipo de Incidente:</strong> Clasifica los eventos (Choque, Atropello, Autolesionado).
+                                <strong>Tipo de Incidente:</strong> Clasifica los eventos (Choque, Atropello).
                             </li>
                             <li class="list-group-item bg-transparent px-0 border-light" style="text-align: justify;">
-                                <strong>Cantidad (Cant.):</strong> Magnitud del incidente basada en el número de actores involucrados.
+                                <strong>Cantidad (Cant.):</strong> Magnitud basada en el número de actores involucrados.
                             </li>
                         </ul>
                     </div>
                 </div>
             </div>
 
+            <!-- Imagen Descriptiva -->
             <div class="col-md-6">
-                <div class="info-card-equal shadow-sm bg-white p-0 rounded-4 h-100 overflow-hidden">
+                <div class="info-card-equal shadow-sm bg-white p-0 rounded-4 h-100 overflow-hidden border-0">
                     <img src="https://www.elespectador.com/resizer/v2/6SCV4BCQRRATZFRTRESR7O7BU4.JPG?auth=010512422d4ce51b0f313f76fe085ee410b1d150faa9329dd84f21fea2891e03&width=1110&height=739&smart=true&quality=60" 
                          alt="Movilidad Bogotá" 
                          class="img-fluid w-100 h-100" 
@@ -50,18 +58,79 @@
             </div>
         </div>
 
-        <div class="row">
-            <div class="col-12">
-                <div class="dashboard-table-container shadow-lg">
-                    <div class="table-header-custom d-flex justify-content-between align-items-center">
-                        <h5 class="m-0 text-secondary">Vista Previa de Registros</h5>
-                        <span class="badge bg-dark">10 Registros</span>
-                    </div>
-                        <div class="table-responsive table-right-aligned">
-                            {{ d.tabla_original | safe }}
-                        </div>
+        <!-- Título de la Tabla -->
+        <div class="text-center mb-4">
+            <h4 class="fw-bold">Vista Previa de Registros Completos</h4>
+             <p>
+            <strong>Fuente del dataset:</strong> Bitacora 062025. (s/f). Gov.co. disponible en 
+            <a href="https://datos.movilidadbogota.gov.co/datasets/04bc6f3f32b04bc1bacc6d2aa42efa19_0/explore?location=4.693706%2C-74.113378%2C10&showTable=true" target="_blank">
+             Portal de Datos Secretaría Distrital de Movilidad
+            </a>.Explora las 23 variables crudas extraídas del dataset original.
+        </p>
+        </div>
+
+        <!-- Contenedor de la Tabla con Scroll -->
+        <div class="card border-0 shadow-sm rounded-4 overflow-hidden bg-white">
+            <div class="card-body p-0">
+                <div class="table-responsive" style="max-height: 500px; overflow: auto;">
+                    <table class="table table-hover align-middle mb-0" style="min-width: 3000px; table-layout: fixed;">
+                        <thead class="bg-light">
+                            <tr style="position: sticky; top: 0; z-index: 10; background: #f8f9fa;">
+                                {% for col in columnas %}
+                                    <th class="text-primary fw-bold py-3 px-3 border-0" style="font-size: 0.75rem; width: 150px;">
+                                        {{ col }}
+                                    </th>
+                                {% endfor %}
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for fila in filas %}
+                                <tr class="border-bottom border-light">
+                                    {% for valor in fila %}
+                                        <td class="py-3 px-3 text-muted border-0" style="font-size: 0.8rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+                                            {{ valor if valor is not none else 'N/A' }}
+                                        </td>
+                                    {% endfor %}
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
                 </div>
             </div>
         </div>
+        
+        <!-- Footer de la Tabla -->
+        <div class="d-flex justify-content-between mt-3 px-2">
+            <small class="text-muted"><i class="bi bi-arrows-expand me-1"></i> Desliza horizontalmente para navegar por las variables</small>
+            <small class="text-muted">Mostrando 50 de {{ total_registros if total_registros else '120,599' }} registros encontrados</small>
+        </div>
     </div>
 </section>
+
+<style>
+    /* Estilización de los scrolls */
+    .table-responsive::-webkit-scrollbar {
+        width: 6px;
+        height: 6px;
+    }
+    .table-responsive::-webkit-scrollbar-track {
+        background: #f1f1f1;
+    }
+    .table-responsive::-webkit-scrollbar-thumb {
+        background: #3b82f6; 
+        border-radius: 10px;
+    }
+    .table-responsive::-webkit-scrollbar-thumb:hover {
+        background: #2563eb;
+    }
+    .bg-primary-soft {
+        background-color: #eef2ff;
+        color: #3b82f6;
+    }
+    .info-card-equal {
+        transition: transform 0.3s ease;
+    }
+    .info-card-equal:hover {
+        transform: translateY(-5px);
+    }
+</style>
