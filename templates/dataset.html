@@ -1,14 +1,12 @@
 <section id="dataset" class="py-5 bg-light">
     <div class="container-fluid px-4">
-        <!-- Título de la Sección -->
         <div class="text-center mb-5">
-            <h2 class="fw-bold display-6">Exploración del Dataset</h2>
+            <h2 class="fw-bold display-6">Exploración del Dataset Multidimensional</h2>
             <p class="text-muted mx-auto" style="max-width: 700px;">
-                Visualización detallada de las 23 variables originales del registro de incidentes viales en Bogotá y las variables estratégicas seleccionadas para el modelo.
+                Visualización detallada de las 28 variables relacionales unificadas en el Modelo Estrella de tu almacén de datos. Datos limpios de la Tabla de Hechos y Dimensiones combinadas para minería.
             </p>
         </div>
 
-        <!-- Fila de Tarjetas Informativas -->
         <div class="row g-4 mb-5">
             <div class="col-md-6">
                 <div class="info-card-equal shadow-sm bg-white p-5 rounded-4 h-100 border-0">
@@ -16,38 +14,35 @@
                         <img src="https://cdn-icons-png.flaticon.com/512/2830/2830305.png" alt="Movilidad" width="60">
                     </div>
 
-                    <h4 class="fw-bold text-dark mb-3 text-center">Bitácora Vial 2025</h4>
+                    <h4 class="fw-bold text-dark mb-3 text-center">Bogotá Traffic Intelligence Almacén OLAP</h4>
                     <p class="text-muted text-center">
-                        Este registro detalla la dinámica de movilidad en Bogotá. Los datos permiten segmentar incidentes para optimizar la respuesta de emergencias.
+                        Este registro consolida la dinámica multidimensional de la accidentalidad en Bogotá, enlazando geografía de precisión, temporalidad horaria y tipologías de flota vehicular extraídas de producción.
                     </p>
                     
                     <div class="d-flex flex-wrap gap-2 mt-4 justify-content-center">
-                        <span class="badge rounded-pill bg-primary px-3 py-2">📅 Fecha</span>
-                        <span class="badge rounded-pill bg-primary px-3 py-2">📍 Localidad</span>
-                        <span class="badge rounded-pill bg-primary px-3 py-2">📊 Cantidad</span>
+                        <span class="badge rounded-pill bg-primary px-3 py-2">🔑 Dim_Ubicacion</span>
+                        <span class="badge rounded-pill bg-primary px-3 py-2">📅 Dim_Tiempo</span>
+                        <span class="badge rounded-pill bg-primary px-3 py-2">🚌 Dim_Vehiculo</span>
+                        <span class="badge rounded-pill bg-primary px-3 py-2">📊 Fact_Incidente</span>
                     </div>
 
                     <div class="mt-5 text-start">
-                        <h5 class="fw-bold mb-3">Variables Seleccionadas para el Análisis:</h5>
+                        <h5 class="fw-bold mb-3">Variables del Entorno Estrella Disponibles:</h5>
                         <ul class="list-group list-group-flush bg-transparent">
                             <li class="list-group-item bg-transparent px-0 border-light" style="text-align: justify;">
-                                <strong>Fecha y Hora:</strong> Cruciales para identificar ciclos de accidentalidad (horas pico vs. nocturnas).
+                                <strong>Infraestructura & Espacio:</strong> Columnas de alto rendimiento como <code>Barrio</code>, <code>Direccion</code>, <code>NomViaPrincipal</code> y <code>Cuadrante</code> mapeadas de forma relacional.
                             </li>
                             <li class="list-group-item bg-transparent px-0 border-light" style="text-align: justify;">
-                                <strong>Localidad:</strong> Permite la segmentación geográfica de los incidentes.
+                                <strong>Entorno Vial y Clima:</strong> Variables categóricas del siniestro que incluyen <code>ClaseSiniestro</code>, <code>ObjetoFijo</code> y <code>CondicionClimatica</code>.
                             </li>
                             <li class="list-group-item bg-transparent px-0 border-light" style="text-align: justify;">
-                                <strong>Tipo de Incidente:</strong> Clasifica los eventos (Choque, Atropello).
-                            </li>
-                            <li class="list-group-item bg-transparent px-0 border-light" style="text-align: justify;">
-                                <strong>Cantidad (Cant.):</strong> Magnitud basada en el número de actores involucrados.
+                                <strong>Métricas de Hechos (Cantidades):</strong> Conteo explícito de severidad física calculado dinámicamente mediante <code>CantIncidentes</code>, <code>CantHeridos</code> y <code>CantMuertos</code>.
                             </li>
                         </ul>
                     </div>
                 </div>
             </div>
 
-            <!-- Imagen Descriptiva -->
             <div class="col-md-6">
                 <div class="info-card-equal shadow-sm bg-white p-0 rounded-4 h-100 overflow-hidden border-0">
                     <img src="https://www.elespectador.com/resizer/v2/6SCV4BCQRRATZFRTRESR7O7BU4.JPG?auth=010512422d4ce51b0f313f76fe085ee410b1d150faa9329dd84f21fea2891e03&width=1110&height=739&smart=true&quality=60" 
@@ -58,22 +53,25 @@
             </div>
         </div>
 
-        <!-- Título de la Tabla -->
         <div class="text-center mb-4">
-            <h4 class="fw-bold">Vista Previa de Registros Completos</h4>
-             <p>
-            <strong>Fuente del dataset:</strong> Bitacora 062025. (s/f). Gov.co. disponible en 
-            <a href="https://datos.movilidadbogota.gov.co/datasets/04bc6f3f32b04bc1bacc6d2aa42efa19_0/explore?location=4.693706%2C-74.113378%2C10&showTable=true" target="_blank">
-             Portal de Datos Secretaría Distrital de Movilidad
-            </a>.Explora las 23 variables crudas extraídas del dataset original.
-        </p>
+            <h4 class="fw-bold">Estructura Detallada de Filas y Columnas Reales</h4>
+            <p class="text-muted small">
+                <strong>Fuente del almacén:</strong> Desarrollado a partir de la información oficial de siniestralidad vial extraída del portal de 
+                <a href="https://datos.movilidadbogota.gov.co/datasets/04bc6f3f32b04bc1bacc6d2aa42efa19_0/explore?location=4.693706%2C-74.113378%2C10&showTable=true" target="_blank" class="fw-bold text-decoration-none text-primary">
+                    Datos Abiertos de la Secretaría de Movilidad de Bogotá <i class="fa-solid fa-arrow-up-right-from-square small"></i>
+                </a> 
+                y consolidado en el repositorio central de código 
+                <a href="https://github.com/Dany601/Datasets901" target="_blank" class="fw-bold text-decoration-none text-primary">
+                    Datasets901 <i class="fa-solid fa-arrow-up-right-from-square small"></i>
+                </a>. 
+                Explora la matriz relacional completa de las características distribuidas en el DataFrame activo.
+            </p>
         </div>
 
-        <!-- Contenedor de la Tabla con Scroll -->
         <div class="card border-0 shadow-sm rounded-4 overflow-hidden bg-white">
             <div class="card-body p-0">
                 <div class="table-responsive" style="max-height: 500px; overflow: auto;">
-                    <table class="table table-hover align-middle mb-0" style="min-width: 3000px; table-layout: fixed;">
+                    <table class="table table-hover align-middle mb-0" style="min-width: 4200px; table-layout: fixed;">
                         <thead class="bg-light">
                             <tr style="position: sticky; top: 0; z-index: 10; background: #f8f9fa;">
                                 {% for col in columnas %}
@@ -99,10 +97,9 @@
             </div>
         </div>
         
-        <!-- Footer de la Tabla -->
         <div class="d-flex justify-content-between mt-3 px-2">
-            <small class="text-muted"><i class="bi bi-arrows-expand me-1"></i> Desliza horizontalmente para navegar por las variables</small>
-            <small class="text-muted">Mostrando 50 de {{ total_registros if total_registros else '120,599' }} registros encontrados</small>
+            <small class="text-muted"><i class="bi bi-arrows-expand me-1"></i> Desliza de forma horizontal para explorar todo el modelo estrella</small>
+            <small class="text-muted">Mostrando 50 de <strong>{{ total_registros if total_registros else '1,102' }}</strong> registros relacionales procesados en el almacén</small>
         </div>
     </div>
 </section>
