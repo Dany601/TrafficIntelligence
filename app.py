@@ -3,10 +3,10 @@ import gc
 import pandas as pd
 import numpy as np
 from flask import Flask, render_template, request
-import requests
 import io
 import base64
 import time
+import pyodbc  # Conector nativo de alto rendimiento para SQL Server
 
 # Machine Learning
 from sklearn.preprocessing import StandardScaler
@@ -20,77 +20,100 @@ import seaborn as sns
 
 app = Flask(__name__)
 
-# Configuración de Ingesta desde GitHub (Tu repositorio y URL original)
-URL_GITHUB = "https://raw.githubusercontent.com/Dany601/Datasets901/main/DBINCIDENTES.csv"
+# --- 1. CONFIGURACIÓN EXACTA CON TU INSTANCIA DE SQL SERVER ---
+DB_CONFIG = {
+    "server": "localhost\\MSSQLSERVER03",     # Sincronizado con tu servidor físico
+    "database": "TrafficIntelligence",       # Nombre real de tu Base de Datos (SSMS)
+    "username": "",                          # Vacío para Autenticación de Windows
+    "password": ""
+}
+
 df_cache = None
 
-# Columnas base para la previsualización interactiva en index.html
+# Columnas requeridas para renderizar las vistas dinámicas de la tabla en index.html
 COLS_DISPLAY = ['Fecha incidente', 'Hora', 'Localidad', 'Total_Implicados']
 
 def obtener_datos():
     global df_cache
     if df_cache is None:
         try:
-            print("LOG: Descargando base de datos unificada desde GitHub...")
-            headers = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)'}
-            response = requests.get(URL_GITHUB, headers=headers, timeout=15)
-            response.raise_for_status()
+            print("=" * 60)
+            print(f"LOG OLAP: Estableciendo conexión con SQL Server [{DB_CONFIG['database']}]...")
+            
+            # Construcción dinámica del Connection String seguro (Autenticación de Windows)
+            conn_str = (
+                f"DRIVER={{ODBC Driver 17 for SQL Server}};"
+                f"SERVER={DB_CONFIG['server']};"
+                f"DATABASE={DB_CONFIG['database']};"
+                f"Trusted_Connection=yes;"
+                f"TrustServerCertificate=yes;"
+            )
 
-            # Lectura adaptativa de delimitadores
-            df = pd.read_csv(io.StringIO(response.text), sep=None, engine='python', on_bad_lines='skip')
+            conexion = pyodbc.connect(conn_str)
+            
+            # CONSULTA MULTIDIMENSIONAL DIRECTA (Fusión de hechos y dimensiones analíticas para el core)
+            query = """
+                SELECT 
+                    t.Fecha AS [Fecha incidente],
+                    t.Hora AS [Hora],
+                    u.Localidad AS [Localidad],
+                    f.CantIncidentes,
+                    f.CantHeridos,
+                    f.CantMuertos
+                FROM Fact_Incidente f
+                INNER JOIN Dim_Tiempo t ON f.IdFecha = t.IdFecha
+                INNER JOIN Dim_Ubicacion u ON f.IdUbicacion = u.IdUbicacion
+            """
+            
+            print("LOG OLAP: Consumiendo datos relacionales estructurados...")
+            df = pd.read_sql(query, conexion)
+            conexion.close() 
+            
+            if df.empty:
+                print("❌ LOG ADVERTENCIA: La base de datos está vacía o el Query falló.")
+                return None
+
+            print(f"LOG OLAP: Ingesta exitosa. Procesando {len(df)} registros en memoria RAM...")
             df.columns = [c.strip() for c in df.columns]
 
-            # --- 1. INGENIERÍA DE VARIABLES: TOTAL IMPLICADOS ---
-            cols_cant = [c for c in df.columns if 'cant' in c.lower() or 'herido' in c.lower() or 'muert' in c.lower()]
-            if cols_cant:
-                print(f"LOG: Columnas de severidad detectadas para la suma: {cols_cant}")
-                for col in cols_cant:
-                    df[col] = pd.to_numeric(df[col], errors='coerce').fillna(0)
-                df['Total_Implicados'] = df[cols_cant].sum(axis=1)
-            else:
-                df['Total_Implicados'] = 1.0
+            # --- 1. PROCESAMIENTO DEL HECHO: TOTAL IMPLICADOS ---
+            df['CantIncidentes'] = pd.to_numeric(df['CantIncidentes'], errors='coerce').fillna(0)
+            df['CantHeridos'] = pd.to_numeric(df['CantHeridos'], errors='coerce').fillna(0)
+            df['CantMuertos'] = pd.to_numeric(df['CantMuertos'], errors='coerce').fillna(0)
+            df['Total_Implicados'] = df['CantIncidentes'] + df['CantHeridos'] + df['CantMuertos']
 
-            # --- 2. INGENIERÍA DE VARIABLES: HORA NUMÉRICA CORREGIDA ---
-            # Buscamos de forma flexible cualquier columna que contenga la palabra 'hora'
-            col_hora_candidata = [c for c in df.columns if 'hora' in c.lower()]
+            # --- 2. PROCESAMIENTO DE LA DIMENSIÓN TEMPORAL: HORA NUMÉRICA ---
+            df['Hora'] = df['Hora'].astype(str).str.strip()
+            df['Hora_Num'] = pd.to_numeric(df['Hora'].str.extract(r'^(\d+)')[0], errors='coerce')
             
-            if col_hora_candidata:
-                col_hora = col_hora_candidata[0]
-                print(f"LOG: Columna temporal detectada: '{col_hora}'")
-                
-                # Convertimos a string para asegurar manipulación segura
-                df[col_hora] = df[col_hora].astype(str).str.strip()
-                
-                # Intento 1: Extracción directa de los primeros dos dígitos (HH), el método más rápido y seguro contra errores de formato
-                df['Hora_Num'] = pd.to_numeric(df[col_hora].str.extract(r'^(\d+)')[0], errors='coerce')
-                
-                # Intento 2 (Fallback): Si la extracción falló en algunas filas, aplicamos datetime flexible
-                if df['Hora_Num'].isna().sum() > len(df) * 0.5:
-                    hora_dt = pd.to_datetime(df[col_hora], format='%H:%M', errors='coerce')
-                    hora_dt = hora_dt.fillna(pd.to_datetime(df[col_hora], format='%H:%M:%S', errors='coerce'))
-                    df['Hora_Num'] = hora_dt.dt.hour.astype('float32')
-            else:
-                print("LOG: ADVERTENCIA: No se detectó ninguna columna de Hora. Usando fallback aleatorio.")
-                df['Hora_Num'] = np.random.default_rng(42).uniform(0, 23, size=len(df)).astype('float32')
+            if df['Hora_Num'].isna().sum() > len(df) * 0.5:
+                hora_dt = pd.to_datetime(df['Hora'], format='%H:%M', errors='coerce')
+                hora_dt = hora_dt.fillna(pd.to_datetime(df['Hora'], format='%H:%M:%S', errors='coerce'))
+                df['Hora_Num'] = hora_dt.dt.hour
 
-            # Rellenamos nulos remanentes en las horas para evitar que dropna borre los registros
+            # --- COMPRESIÓN EN float32 Y LÍMITES LÓGICOS ---
             df['Hora_Num'] = pd.to_numeric(df['Hora_Num'], errors='coerce').fillna(12).astype('float32')
             df['Total_Implicados'] = df['Total_Implicados'].astype('float32')
             
-            # Forzamos límites lógicos para que la analítica sea consistente
             df.loc[df['Hora_Num'] < 0, 'Hora_Num'] = 0
             df.loc[df['Hora_Num'] > 23, 'Hora_Num'] = 23
             df.loc[df['Total_Implicados'] <= 0, 'Total_Implicados'] = 1.0
 
-            # Limpieza final de seguridad sin riesgo de vaciado
+            df = df.rename(columns={'Fecha incidente': 'Fecha', 'Hora': 'Hora', 'Localidad': 'Localidad'})
             df = df.dropna(subset=['Hora_Num', 'Total_Implicados'])
-
             df_cache = df
-            gc.collect()
-            print(f"LOG: ¡Éxito! Almacén OLAP mapeado con {len(df)} registros y {len(df.columns)} columnas.")
+            gc.collect() 
+            print(f"LOG OLAP: Almacén multidimensional activo con {len(df)} registros.")
+            print("=" * 60)
+
         except Exception as e:
-            print(f"LOG: Error crítico al inyectar la base de datos: {e}")
+            import traceback
+            print("=" * 60)
+            print(f"❌ LOG ERROR: Error crítico en el pipeline multidimensional: {e}")
+            traceback.print_exc()
+            print("=" * 60)
             return None
+
     return df_cache
 
 def fig_to_base64(plt_obj):
@@ -104,11 +127,9 @@ def fig_to_base64(plt_obj):
 def procesar_dashboard(k_usuario):
     df_clean = obtener_datos()
     if df_clean is None or len(df_clean) == 0: 
-        print("LOG: No se puede procesar el dashboard debido a que el dataset está vacío.")
         return None
 
     start_time = time.time()
-    
     try:
         X = df_clean[['Hora_Num', 'Total_Implicados']].values.astype('float32')
         scaler = StandardScaler()
@@ -138,24 +159,17 @@ def procesar_dashboard(k_usuario):
         cluster_ids = kmeans_final.fit_predict(X_scaled)
         cluster_labels = np.array([f'Grupo {x}' for x in cluster_ids])
 
-        # 3. GENERACIÓN DE TABLAS DINÁMICAS EN FORMATO HTML
-        cols_display_reales = [c for c in COLS_DISPLAY if c in df_clean.columns]
-        if 'Total_Implicados' not in cols_display_reales:
-            cols_display_reales.append('Total_Implicados')
-        
+        # 3. GENERACIÓN DE TABLAS DINÁMICAS EN FORMATO HTML (Muestra Index)
+        cols_display_reales = ['Fecha', 'Hora', 'Localidad', 'Total_Implicados']
         tabla_original_html = df_clean[cols_display_reales].head(10).to_html(
-            classes='table table-hover align-middle m-0',
-            index=False,
-            border=0
+            classes='table table-hover align-middle m-0', index=False, border=0
         )
 
         idx_sample = np.random.default_rng(42).choice(len(df_clean), size=min(50, len(df_clean)), replace=False)
         df_muestra = df_clean[cols_display_reales].iloc[idx_sample].copy()
         df_muestra['Cluster_Label'] = cluster_labels[idx_sample]
         tabla_resultados_html = df_muestra.to_html(
-            classes='table table-hover align-middle m-0',
-            index=False,
-            border=0
+            classes='table table-hover align-middle m-0', index=False, border=0
         )
         del df_muestra
 
@@ -169,8 +183,7 @@ def procesar_dashboard(k_usuario):
         labels_plot = cluster_labels[idx_plot]
 
         plt.figure(figsize=(8, 5))
-        sns.scatterplot(x=jitter_x, y=jitter_y, hue=labels_plot,
-                        hue_order=orden_leyenda, palette='tab10', s=60, alpha=0.7)
+        sns.scatterplot(x=jitter_x, y=jitter_y, hue=labels_plot, hue_order=orden_leyenda, palette='tab10', s=60, alpha=0.7)
         plt.title(f'Visualización Estructurada de Clústeres (K={k_usuario})')
         plt.xlabel('Dimensión Temporal (Hora_Num)')
         plt.ylabel('Impacto Vial (Total Implicados)')
@@ -197,7 +210,7 @@ def procesar_dashboard(k_usuario):
             factor = (num_pasos - i) / num_pasos if num_pasos > 0 else 0
             inercia_paso = int(kmeans_final.inertia_ * (1 + factor * 0.4))
             estado = "Finalizado" if i == num_pasos else ("Inicialización" if i == 0 else "Convergiendo")
-            mov = "0" if i == num_pasos else ("N/A" if i == 0 else f"{round(np.random.uniform(0.1, 1.2), 3)}")
+            mov = "0" if i == num_pasos else f"{round(np.random.uniform(0.1, 1.2), 3)}"
             evolucion_lista.append({"iter": i, "inercia": inercia_paso, "mov": mov, "estado": estado})
 
         return {
@@ -218,7 +231,7 @@ def procesar_dashboard(k_usuario):
             "evolucion": evolucion_lista
         }
     except Exception as e:
-        print(f"LOG: Error en procesamiento analítico: {e}")
+        print(f"❌ LOG ERROR: Excepción en bucle analítico de Scikit-Learn: {e}")
         return None
 
 @app.route('/')
@@ -235,16 +248,145 @@ def index():
         filas_reales = df.head(50).values.tolist()
         total_filas_reales = len(df)
         
+        # Obtenemos las localidades únicas para que los selectores del include no queden vacíos
+        localidades_unicas = sorted(df['Localidad'].unique().tolist()) if 'Localidad' in df.columns else []
+        rangos_unicos = ["Hora Pico Mañana", "Hora Valle", "Hora Pico Tarde", "Hora Nocturna"]
+        
         return render_template(
             'index.html', 
             d=dashboard_data, 
             current_k=k_val,
             columnas=columnas_reales, 
             filas=filas_reales,
-            total_registros=total_filas_reales
+            total_registros=total_filas_reales,
+            
+            # --- SOLUCIÓN CRÍTICA: Inyectamos las variables al index para sanar el {% include %} ---
+            tabla_dinamica_olap=None,
+            localidades=localidades_unicas,
+            rangos=rangos_unicos,
+            localidad_sel='',
+            rango_sel='',
+            total_resultados=0  # Al valer 0, el bloque {% if total_resultados > 0 %} se evalúa falso y no falla
         )
-    return "Error crítico: El pipeline de datos está vacío o el archivo posee anomalías estructurales."
+    return "Error crítico: El pipeline de datos está vacío o SQL Server no responde.", 500
+# --- 2. RUTA BASE DEL MODELO MULTIDIMENSIONAL (Carga Inicial Limpia) ---
+@app.route('/modelo-multidimensional')
+def mostrar_modelo_multidimensional():
+    df_base = obtener_datos()
+    localidades_unicas = sorted(df_base['Localidad'].unique().tolist()) if df_base is not None else []
+    rangos_unicos = ["Hora Pico Mañana", "Hora Valle", "Hora Pico Tarde", "Hora Nocturna"]
+    
+    # IMPORTANTE: total_resultados=0 evita el UndefinedError en la carga inicial de multidimensional.html
+    return render_template(
+        'multidimensional.html', 
+        tabla_dinamica_olap=None,
+        localidades=localidades_unicas, 
+        rangos=rangos_unicos,
+        localidad_sel='', 
+        rango_sel='', 
+        total_resultados=0  
+    )
+
+# --- 3. RUTA GET DEL FILTRADO EN CALIENTE DIRECTO A TU ESQUEMA ESTRELLA ---
+# Reemplaza únicamente tu ruta de consulta final en app.py por esta versión unificada:
+
+@app.route('/modelo-multidimensional/consulta', methods=['GET'])
+def consulta_dinamica_olap():
+    try:
+        # 1. Capturar los filtros desde los selectores del formulario HTML
+        filtro_localidad = request.args.get('localidad', default='', type=str).strip()
+        filtro_rango = request.args.get('rango', default='', type=str).strip()
+
+        # 2. Conectar de forma segura a SQL Server
+        conn_str = (
+            f"DRIVER={{ODBC Driver 17 for SQL Server}};"
+            f"SERVER={DB_CONFIG['server']};"
+            f"DATABASE={DB_CONFIG['database']};"
+            f"Trusted_Connection=yes;"
+            f"TrustServerCertificate=yes;"
+        )
+        conexion = pyodbc.connect(conn_str)
+
+        # 3. Query dinámico parametrizado contra tus tablas reales de SSMS
+        query = """
+            SELECT 
+                t.Fecha AS [Fecha],
+                t.Hora AS [Hora],
+                t.RangoHorario AS [Rango Horario],
+                u.Localidad AS [Localidad],
+                u.Barrio AS [Barrio],
+                v.TipoVehiculo AS [Vehículo],
+                f.CantIncidentes AS [Siniestros],
+                f.CantHeridos AS [Heridos],
+                f.CantMuertos AS [Fatalidades]
+            FROM Fact_Incidente f
+            INNER JOIN Dim_Tiempo t ON f.IdFecha = t.IdFecha
+            INNER JOIN Dim_Ubicacion u ON f.IdUbicacion = u.IdUbicacion
+            INNER JOIN Dim_Vehiculo v ON f.IdVehiculo = v.IdVehiculo
+            WHERE 1=1
+        """
+        params = []
+        if filtro_localidad:
+            query += " AND u.Localidad = ?"
+            params.append(filtro_localidad)
+        if filtro_rango:
+            query += " AND t.RangoHorario = ?"
+            params.append(filtro_rango)
+
+        query += " ORDER BY t.Fecha DESC"
+        df_res = pd.read_sql(query, conexion, params=params)
+        conexion.close()
+
+        # 4. Parsear la respuesta relacional a estructura HTML vestida con Bootstrap
+        if df_res.empty:
+            tabla_html = (
+                '<div class="alert alert-warning text-center my-3">'
+                '   <i class="bi bi-exclamation-triangle-fill me-2"></i>'
+                '   No se encontraron registros en el Data Warehouse para los criterios seleccionados.'
+                '</div>'
+            )
+            total_filas = 0
+        else:
+            tabla_html = df_res.head(30).to_html(
+                classes='table table-hover table-striped align-middle text-center border-light-subtle small m-0', 
+                index=False, 
+                border=0
+            )
+            total_filas = len(df_res)
+
+        # 5. Cargar los catálogos base para mantener los selectores HTML poblados
+        df_base = obtener_datos()
+        localidades_unicas = sorted(df_base['Localidad'].unique().tolist()) if df_base is not None else []
+        rangos_unicos = ["Hora Pico Mañana", "Hora Valle", "Hora Pico Tarde", "Hora Nocturna"]
+
+        # 6. Ejecutar el core del clúster (K=4) para que la parte superior de la página no quede en blanco
+        dashboard_data = procesar_dashboard(4)
+
+        gc.collect() # Liberador de RAM defensivo
+        
+        # --- EL CAMBIO MAESTRO ---
+        # Volvemos a renderizar 'index.html' completo. Así se inyectan los estilos, las gráficas superiores
+        # y la tabla multidimensional abajo en su lugar exacto sin desarmar la pantalla.
+        return render_template(
+            'index.html', 
+            d=dashboard_data, 
+            current_k=4,
+            columnas=df_base.columns.tolist() if df_base is not None else [], 
+            filas=df_base.head(50).values.tolist() if df_base is not None else [], 
+            total_registros=len(df_base) if df_base is not None else 0,
+            
+            # Variables de control que lee multidimensional.html
+            tabla_dinamica_olap=tabla_html,
+            localidades=localidades_unicas, 
+            rangos=rangos_unicos,
+            localidad_sel=filtro_localidad, 
+            rango_sel=filtro_rango, 
+            total_resultados=total_filas
+        )
+    except Exception as e:
+        print(f"❌ LOG ERROR: Fallo crítico en el pipeline de la consola GET: {e}")
+        return f"Error interno en el servidor analítico: {e}", 500
 
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))
-    app.run(host='0.0.0.0', port=port)
+    app.run(host='0.0.0.0', port=port, debug=True)
