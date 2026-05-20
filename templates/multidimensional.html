@@ -61,10 +61,9 @@
                     </div>
 
                     <div class="tab-content" id="diagramaTabsContent">
-                        
                         <div class="tab-pane fade show active p-4 p-md-5 bg-light-subtle text-center" id="tab-imagen" role="tabpanel" aria-labelledby="imagen-tab">
                             <div class="img-container-schema mx-auto shadow-sm rounded-4 overflow-hidden border border-light-subtle bg-white p-3" style="max-width: 950px;">
-                                <img src="static/img/Diagrama BD.png" alt="Diagrama de Base de Datos Multidimensional" class="img-fluid rounded-3 img-zoom-effect">
+                                <img src="{{ url_for('static', filename='img/Diagrama BD.png') }}" alt="Diagrama de Base de Datos Multidimensional" class="img-fluid rounded-3 img-zoom-effect">
                             </div>
                             <p class="text-muted small mt-3 mb-0">
                                 <i class="bi bi-zoom-in me-1"></i> Vista detallada de llaves primarias, foráneas y relaciones de cardinalidad del Data Warehouse.
@@ -140,10 +139,70 @@
                             </div>
                         </div>
                     </div>
+                </div>
+            </div>
+        </div>
 
-                    <div class="bg-light p-3 border-top d-flex justify-content-between align-items-center">
-                        <div class="small text-muted">
-                            <i class="bi bi-info-circle-fill me-1"></i> Data Warehouse estructurado bajo arquitectura OLAP para optimizar tiempos de respuesta analíticos.
+        <div class="row mt-5 mb-5" id="consola-extraccion">
+            <div class="col-lg-12">
+                <div class="card border-0 shadow-lg rounded-4 overflow-hidden bg-white border border-light-subtle">
+                    <div class="p-4 bg-dark text-white d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3">
+                        <div>
+                            <span class="badge bg-primary text-white mb-2 uppercase fw-bold">INTERFAZ DE CONTROL</span>
+                            <h4 class="fw-bold m-0 text-white"><i class="bi bi-sliders me-2 text-primary"></i>Consola Relacional de Filtrado Cruzado GET</h4>
+                            <p class="text-white-50 small m-0 mt-1">Segmenta y extrae dinámicamente registros de tu base de datos SQL Server mediante parámetros síncronos en caliente.</p>
+                        </div>
+                        {% if total_resultados > 0 %}
+                        <div>
+                            <span class="badge bg-success p-2 rounded-pill fw-bold shadow-sm">
+                                <i class="bi bi-check-circle-fill me-1"></i> {{ total_resultados }} Filas Extraídas
+                            </span>
+                        </div>
+                        {% endif %}
+                    </div>
+                    
+                    <div class="card-body p-4 bg-light-subtle">
+                        <form action="/modelo-multidimensional/consulta" method="GET" class="row g-3 align-items-end mb-4">
+                            <div class="col-md-5">
+                                <label for="localidad" class="form-label small fw-bold text-muted uppercase"><i class="bi bi-geo-alt-fill me-1 text-primary"></i>Dim_Ubicacion (Localidad):</label>
+                                <select id="localidad" name="localidad" class="form-select border-2 p-2.5 rounded-3">
+                                    <option value="">-- Todas las Localidades --</option>
+                                    {% for loc in localidades %}
+                                        <option value="{{ loc }}" {% if loc == localidad_sel %}selected{% endif %}>{{ loc }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                            <div class="col-md-5">
+                                <label for="rango" class="form-label small fw-bold text-muted uppercase"><i class="bi bi-clock-fill me-1 text-primary"></i>Dim_Tiempo (Rango Horario):</label>
+                                <select id="rango" name="rango" class="form-select border-2 p-2.5 rounded-3">
+                                    <option value="">-- Todos los Rangos --</option>
+                                    {% for r in rangos %}
+                                        <option value="{{ r }}" {% if r == rango_sel %}selected{% endif %}>{{ r }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                            <div class="col-md-2">
+                                <button type="submit" class="btn btn-primary w-100 p-2.5 rounded-3 fw-bold shadow-sm">
+                                    <i class="bi bi-search me-1"></i> Consultar
+                                </button>
+                            </div>
+                        </form>
+
+                        <div class="card border border-light-subtle shadow-inner rounded-4 overflow-hidden bg-white">
+                            <div class="card-header bg-white text-dark py-3 fw-bold d-flex align-items-center justify-content-between border-bottom border-light-subtle">
+                                <span class="small text-muted"><i class="bi bi-table text-primary me-2"></i>Muestra Activa en RAM del Esquema Estrella (Límite: Top 30)</span>
+                            </div>
+                            <div class="table-responsive" style="max-height: 440px; overflow-y: auto;">
+                                {% if tabla_dinamica_olap %}
+                                    {{ tabla_dinamica_olap|safe }}
+                                {% else %}
+                                    <div class="p-5 text-center text-muted">
+                                        <i class="bi bi-database-fill-gear text-primary display-4 mb-3 d-block"></i>
+                                        <p class="m-0 fw-bold">Consola en Espera de Parámetros Analíticos</p>
+                                        <p class="small text-muted mb-0">Selecciona criterios para auditar las dimensiones del Data Warehouse en tiempo real.</p>
+                                    </div>
+                                {% endif %}
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -325,7 +384,7 @@ ORDER BY Cantidad_Siniestros DESC, Total_Heridos DESC;</code></pre>
                                         <td class="fw-bold">Rafael Uribe Uribe</td>
                                         <td>Autopista Norte con Calle 53</td>
                                         <td>Autopista Norte</td>
-                                        <td class="fw-bold">8</td>
+                                        <td>8</td>
                                         <td class="fw-bold text-danger">10</td>
                                     </tr>
                                     <tr>
@@ -336,21 +395,21 @@ ORDER BY Cantidad_Siniestros DESC, Total_Heridos DESC;</code></pre>
                                         <td class="fw-bold text-danger">13</td>
                                     </tr>
                                     <tr>
-                                        <td>Chapinero</td>
+                                        <td class="fw-bold">Chapinero</td>
                                         <td>Carrera 30 con Calle 53</td>
                                         <td>Carrera 30</td>
                                         <td>6</td>
                                         <td>2</td>
                                     </tr>
                                     <tr>
-                                        <td>Santa Fe</td>
+                                        <td class="fw-bold">Santa Fe</td>
                                         <td>Calle 80 con Calle 53</td>
                                         <td>Calle 80</td>
                                         <td>6</td>
                                         <td>4</td>
                                     </tr>
                                     <tr>
-                                        <td>Antonio Nariño</td>
+                                        <td class="fw-bold">Antonio Nariño</td>
                                         <td>Avenida Boyacá con Calle 63</td>
                                         <td>Avenida Boyacá</td>
                                         <td>5</td>
@@ -368,7 +427,6 @@ ORDER BY Cantidad_Siniestros DESC, Total_Heridos DESC;</code></pre>
                         </div>
                     </div>
                 </div>
-
             </div>
         </div>
 
@@ -457,62 +515,62 @@ ORDER BY Cantidad_Siniestros DESC, Total_Heridos DESC;</code></pre>
                 </div>
             </div>
         </div>
-    </div>
 
-    <div class="row g-4 mb-5 mt-4 px-3">
-        <div class="col-md-4">
-            <div class="card border-0 shadow-sm rounded-4 h-100 p-4 bg-white border-bottom border-danger border-4">
-                <div class="d-flex justify-content-between align-items-start mb-3">
-                    <div class="bg-danger-subtle p-2 rounded-3">
-                        <i class="bi bi-clock-history text-danger"></i>
+        <div class="row g-4 mb-5 mt-4 px-3">
+            <div class="col-md-4">
+                <div class="card border-0 shadow-sm rounded-4 h-100 p-4 bg-white border-bottom border-danger border-4">
+                    <div class="d-flex justify-content-between align-items-start mb-3">
+                        <div class="bg-danger-subtle p-2 rounded-3">
+                            <i class="bi bi-clock-history text-danger"></i>
+                        </div>
+                        <span class="badge bg-danger-subtle text-danger rounded-pill px-3">Letalidad Crítica</span>
                     </div>
-                    <span class="badge bg-danger-subtle text-danger rounded-pill px-3">Letalidad Crítica</span>
-                </div>
-                <h5 class="fw-bold text-dark">Hora Pico Mañana</h5>
-                <p class="small text-muted mb-3">Mortalidad: 13.44% de Índice</p>
-                <p class="small text-muted" style="text-align: justify;">
-                    Aunque registra menor número total de incidentes (186) que la Hora Valle, es la ventana temporal más letal en las vías de la ciudad, acumulando un total de 25 fallecidos confirmados.
-                </p>
-                <div class="progress mt-auto" style="height: 6px;">
-                    <div class="progress-bar bg-danger" style="width: 85%;"></div>
+                    <h5 class="fw-bold text-dark">Hora Pico Mañana</h5>
+                    <p class="small text-muted mb-3">Mortalidad: 13.44% de Índice</p>
+                    <p class="small text-muted" style="text-align: justify;">
+                        Aunque registra menor número total de incidentes (186) que la Hora Valle, es la ventana temporal más letal en las vías de la ciudad, acumulando un total de 25 fallecidos confirmados.
+                    </p>
+                    <div class="progress mt-auto" style="height: 6px;">
+                        <div class="progress-bar bg-danger" style="width: 85%;"></div>
+                    </div>
                 </div>
             </div>
-        </div>
 
-        <div class="col-md-4">
-            <div class="card border-0 shadow-sm rounded-4 h-100 p-4 bg-white border-bottom border-primary border-4">
-                <div class="d-flex justify-content-between align-items-start mb-3">
-                    <div class="bg-primary-subtle p-2 rounded-3">
-                        <i class="bi bi-geo-alt-fill text-primary"></i>
+            <div class="col-md-4">
+                <div class="card border-0 shadow-sm rounded-4 h-100 p-4 bg-white border-bottom border-primary border-4">
+                    <div class="d-flex justify-content-between align-items-start mb-3">
+                        <div class="bg-primary-subtle p-2 rounded-3">
+                            <i class="bi bi-geo-alt-fill text-primary"></i>
+                        </div>
+                        <span class="badge bg-primary-subtle text-primary rounded-pill px-3">Dim_Ubicacion</span>
                     </div>
-                    <span class="badge bg-primary-subtle text-primary rounded-pill px-3">Dim_Ubicacion</span>
-                </div>
-                <h5 class="fw-bold text-dark">Epicentro Chapinero</h5>
-                <p class="small text-muted mb-3">Víctimas Consolidadas: 89</p>
-                <p class="small text-muted" style="text-align: justify;">
-                    Encabeza el análisis espacial con 75 siniestros base y 83 lesionados, consolidándose como la demarcación con mayor concentración de tramas de riesgo vial en las consultas multi-tabla.
-                </p>
-                <div class="progress mt-auto" style="height: 6px;">
-                    <div class="progress-bar bg-primary" style="width: 75%;"></div>
+                    <h5 class="fw-bold text-dark">Epicentro Chapinero</h5>
+                    <p class="small text-muted mb-3">Víctimas Consolidadas: 89</p>
+                    <p class="small text-muted" style="text-align: justify;">
+                        Encabeza el análisis espacial con 75 siniestros base y 83 lesionados, consolidándose como la demarcación con mayor concentración de tramas de riesgo vial en las consultas multi-tabla.
+                    </p>
+                    <div class="progress mt-auto" style="height: 6px;">
+                        <div class="progress-bar bg-primary" style="width: 75%;"></div>
+                    </div>
                 </div>
             </div>
-        </div>
 
-        <div class="col-md-4">
-            <div class="card border-0 shadow-sm rounded-4 h-100 p-4 bg-white border-bottom border-primary border-4">
-                <div class="d-flex justify-content-between align-items-start mb-3">
-                    <div class="bg-primary-subtle p-2 rounded-3">
-                        <i class="bi bi-bicycle text-primary"></i>
+            <div class="col-md-4">
+                <div class="card border-0 shadow-sm rounded-4 h-100 p-4 bg-white border-bottom border-primary border-4">
+                    <div class="d-flex justify-content-between align-items-start mb-3">
+                        <div class="bg-primary-subtle p-2 rounded-3">
+                            <i class="bi bi-bicycle text-primary"></i>
+                        </div>
+                        <span class="badge bg-primary-subtle text-primary rounded-pill px-3">Dim_Vehiculo</span>
                     </div>
-                    <span class="badge bg-primary-subtle text-primary rounded-pill px-3">Dim_Vehiculo</span>
-                </div>
-                <h5 class="fw-bold text-dark">Fragilidad en Bicicletas</h5>
-                <p class="small text-muted mb-3">Fallecidos: 13 Usuarios</p>
-                <p class="small text-muted" style="text-align: justify;">
-                    Los datos exponen una correlación de alto riesgo para los ciclos: con 113 incidentes registrados, igualan el volumen de fatalidades de los automóviles particulares, denotando desprotección en la vía.
-                </p>
-                <div class="progress mt-auto" style="height: 6px;">
-                    <div class="progress-bar bg-primary" style="width: 68%;"></div>
+                    <h5 class="fw-bold text-dark">Fragilidad en Bicicletas</h5>
+                    <p class="small text-muted mb-3">Fallecidos: 13 Usuarios</p>
+                    <p class="small text-muted" style="text-align: justify;">
+                        Los datos exponen una correlación de alto riesgo para los ciclos: con 113 incidentes registrados, igualan el volumen de fatalidades de los automóviles particulares, denotando desprotección en la vía.
+                    </p>
+                    <div class="progress mt-auto" style="height: 6px;">
+                        <div class="progress-bar bg-primary" style="width: 68%;"></div>
+                    </div>
                 </div>
             </div>
         </div>
@@ -539,7 +597,7 @@ ORDER BY Cantidad_Siniestros DESC, Total_Heridos DESC;</code></pre>
     .col-xl-2\.4 { width: 20%; }
     .col-xl-2\.8 { width: 20%; }
     pre { font-family: 'Courier New', Courier, monospace; overflow-x: auto; }
-    .table th { font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; font-size: 0.8rem; }
+    .table th { background-color: #3b82f6 !important; color: white !important; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; font-size: 0.8rem; }
     .table-danger-subtle { background-color: #ffeeef!important; }
     .table-warning-subtle { background-color: #fffbeb!important; }
     @media (max-width: 1200px) {
