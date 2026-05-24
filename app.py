@@ -6,13 +6,9 @@ from flask import Flask, render_template, request
 import io
 import base64
 import time
-import pyodbc  
-
-# Machine Learning
+import pymssql  
 from sklearn.preprocessing import StandardScaler
 from sklearn.cluster import KMeans
-
-# Gráficas en segundo plano
 import matplotlib
 matplotlib.use('Agg') 
 import matplotlib.pyplot as plt
@@ -20,19 +16,17 @@ import seaborn as sns
 
 app = Flask(__name__)
 
-# --- 1. CONFIGURACIÓN EXACTA CON TU INSTANCIA DE AZURE SQL DATABASE ---
+
 DB_CONFIG = {
-    "server": "bogotatraffic-dbserver.database.windows.net",  # Servidor en la nube
-    "database": "TrafficIntelligence",                      # Tu BD en Azure
-    "username": "traffic_admin",                            # Tu usuario de Azure
-    "password": "Abie2004"                     # <-- REEMPLAZA CON TU CONTRASEÑA REAL
+    "server": os.environ.get("DB_SERVER", "bogotatraffic-dbserver.database.windows.net"), 
+    "database": os.environ.get("DB_DATABASE", "TrafficIntelligence"),       
+    "username": os.environ.get("DB_USERNAME", "traffic_admin@bogotatraffic-dbserver"),                          
+    "password": os.environ.get("DB_PASSWORD", "Abie2004") 
 }
 
-# Variables de caché global para evitar latencia innecesaria por internet
 df_cache = None
-wcss_cache = None  # Cache analítico para optimizar el Método del Codo
+wcss_cache = None  
 
-# Columnas requeridas para renderizar las vistas dinámicas de la tabla en index.html
 COLS_DISPLAY = ['Fecha', 'Hora', 'Localidad', 'Total_Implicados']
 
 def obtener_datos():
@@ -40,23 +34,19 @@ def obtener_datos():
     if df_cache is None:
         try:
             print("=" * 60)
-            print(f"LOG OLAP: Estableciendo conexión con Azure SQL Database [{DB_CONFIG['database']}]...")
+            print(f"LOG OLAP: Estableciendo conexión nativa con Azure SQL [{DB_CONFIG['database']}]...")
             
-            # Cadena de conexión parametrizada con los protocolos de seguridad de Azure
-            conn_str = (
-                f"DRIVER={{ODBC Driver 17 for SQL Server}};"
-                f"SERVER={DB_CONFIG['server']};"
-                f"DATABASE={DB_CONFIG['database']};"
-                f"UID={DB_CONFIG['username']};"
-                f"PWD={DB_CONFIG['password']};"
-                f"Encrypt=yes;"                      # <-- CRÍTICO: Cifra los datos en tránsito por internet
-                f"TrustServerCertificate=no;"        # <-- CRÍTICO: Valida la identidad del servidor de Azure
-                f"Connection Timeout=30;"            # Espera prudente para redes en la nube
+            # Conexión directa mediante pymssql optimizada con el Puerto Estándar de Azure
+            conexion = pymssql.connect(
+                server=DB_CONFIG['server'],
+                port=1433,                                  # Mapeo de puerto explícito para evitar caídas de red
+                user=DB_CONFIG['username'],
+                password=DB_CONFIG['password'],
+                database=DB_CONFIG['database'],
+                as_dict=False,                              # Estructura requerida para la ingesta nativa de Pandas
+                autocommit=True
             )
-
-            conexion = pyodbc.connect(conn_str)
             
-            # CONSULTA MULTIDIMENSIONAL DIRECTA CONTRA TU ESQUEMA ESTRELLA EN LA NUBE
             query = """
                 SELECT 
                     t.Fecha AS [Fecha],
@@ -74,7 +64,7 @@ def obtener_datos():
                 INNER JOIN Dim_Vehiculo v ON f.IdVehiculo = v.IdVehiculo
             """
             
-            print("LOG OLAP: Consumiendo datos relacionales desde la infraestructura cloud...")
+            print("LOG OLAP: Consumiendo datos analíticos estructurados desde la nube...")
             df = pd.read_sql(query, conexion)
             conexion.close() 
             
@@ -82,16 +72,15 @@ def obtener_datos():
                 print("❌ LOG ADVERTENCIA: La base de datos en Azure está vacía o el Query falló.")
                 return None
 
-            print(f"LOG OLAP: Ingesta cloud exitosa. Procesando {len(df)} registros en memoria RAM...")
+            print(f"LOG OLAP: Ingesta exitosa. Procesando {len(df)} registros en memoria RAM...")
             df.columns = [c.strip() for c in df.columns]
 
-            # --- 1. PROCESAMIENTO DEL HECHO: TOTAL IMPLICADOS ---
             df['CantIncidentes'] = pd.to_numeric(df['CantIncidentes'], errors='coerce').fillna(0)
             df['CantHeridos'] = pd.to_numeric(df['CantHeridos'], errors='coerce').fillna(0)
             df['CantMuertos'] = pd.to_numeric(df['CantMuertos'], errors='coerce').fillna(0)
             df['Total_Implicados'] = df['CantIncidentes'] + df['CantHeridos'] + df['CantMuertos']
 
-            # --- 2. PROCESAMIENTO DE LA DIMENSIÓN TEMPORAL: HORA NUMÉRICA ---
+            # --- PROCESAMIENTO DE LA DIMENSIÓN TEMPORAL: HORA NUMÉRICA ---
             df['Hora'] = df['Hora'].astype(str).str.strip()
             df['Hora_Num'] = pd.to_numeric(df['Hora'].str.extract(r'^(\d+)')[0], errors='coerce')
             
@@ -100,7 +89,7 @@ def obtener_datos():
                 hora_dt = hora_dt.fillna(pd.to_datetime(df['Hora'], format='%H:%M:%S', errors='coerce'))
                 df['Hora_Num'] = hora_dt.dt.hour
 
-            # COMPRESIÓN EN float32 Y LÍMITES LÓGICOS (Ahorro defensivo de memoria)
+            # Compresión óptima de memoria para servidores compartidos
             df['Hora_Num'] = pd.to_numeric(df['Hora_Num'], errors='coerce').fillna(12).astype('float32')
             df['Total_Implicados'] = df['Total_Implicados'].astype('float32')
             
@@ -111,13 +100,13 @@ def obtener_datos():
             df = df.dropna(subset=['Hora_Num', 'Total_Implicados'])
             df_cache = df
             gc.collect() 
-            print(f"LOG OLAP: Almacén multidimensional activo con {len(df)} registros.")
+            print(f"LOG OLAP: Almacén multidimensional activo en memoria con {len(df)} registros.")
             print("=" * 60)
 
         except Exception as e:
             import traceback
             print("=" * 60)
-            print(f"❌ LOG ERROR: Error crítico en el pipeline multidimensional cloud: {e}")
+            print(f"❌ LOG ERROR: Error crítico en el pipeline cloud: {e}")
             traceback.print_exc()
             print("=" * 60)
             return None
@@ -143,11 +132,10 @@ def procesar_dashboard(k_usuario):
         X = df_clean[['Hora_Num', 'Total_Implicados']].values.astype('float32')
         scaler = StandardScaler()
         X_scaled = scaler.fit_transform(X).astype('float32')
-        del X
 
-        # --- OPTIMIZACIÓN SENSACIONAL: MÉTODO DEL CODO EN CACHÉ DE MEMORIA ---
+        # --- OPTIMIZACIÓN: MÉTODO DEL CODO CACHEADO (Evita recalcular por internet en cada petición) ---
         if wcss_cache is None:
-            print("LOG ML: Calculando curvas de inercia por primera vez sobre datos cloud...")
+            print("LOG ML: Calculando curvas de inercia por primera vez desde Azure...")
             wcss_cache = []
             for i in range(1, 11):
                 km = KMeans(n_clusters=i, init='k-means++', random_state=42, n_init=3)
@@ -301,10 +289,9 @@ def consulta_dinamica_olap():
         filtro_localidad = request.args.get('localidad', default='', type=str).strip()
         filtro_rango = request.args.get('rango', default='', type=str).strip()
 
-        # Usamos eficientemente el df en memoria para el filtrado dinámico
         df_base = obtener_datos()
         if df_base is None:
-            return "Error: Almacén de datos vacío", 500
+            return "Error interno: Cache vacío", 500
             
         df_res = df_base.copy()
         
@@ -354,7 +341,7 @@ def consulta_dinamica_olap():
             total_resultados=total_filas
         )
     except Exception as e:
-        print(f"❌ LOG ERROR: Fallo crítico en el pipeline de la consola GET: {e}")
+        print(f"❌ LOG ERROR: Fallo crítico en el pipeline de la consulta GET: {e}")
         return f"Error interno en el servidor analítico: {e}", 500
 
 if __name__ == '__main__':
