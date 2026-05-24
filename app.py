@@ -6,9 +6,13 @@ from flask import Flask, render_template, request
 import io
 import base64
 import time
-import pymssql  
+import pymssql  # Conector nativo compatible con Render Free (Sin drivers de sistema)
+
+# Machine Learning
 from sklearn.preprocessing import StandardScaler
 from sklearn.cluster import KMeans
+
+# Gráficas en segundo plano
 import matplotlib
 matplotlib.use('Agg') 
 import matplotlib.pyplot as plt
@@ -16,14 +20,17 @@ import seaborn as sns
 
 app = Flask(__name__)
 
-
+# --- 1. CONFIGURACIÓN DE CONEXIÓN A AZURE SQL (HÍBRIDA Y SEGURA) ---
+# En la nube leerá el panel de Render, en tu PC usará lo que escribas en las comillas.
 DB_CONFIG = {
     "server": os.environ.get("DB_SERVER", "bogotatraffic-dbserver.database.windows.net"), 
     "database": os.environ.get("DB_DATABASE", "TrafficIntelligence"),       
+    # Se incluye el sufijo del servidor exigido por el protocolo TDS de pymssql en Azure
     "username": os.environ.get("DB_USERNAME", "traffic_admin@bogotatraffic-dbserver"),                          
-    "password": os.environ.get("DB_PASSWORD", "Abie2004") 
+    "password": os.environ.get("DB_PASSWORD", "Abie2004")  
 }
 
+# Almacenamiento en caché global para proteger el rendimiento cloud y evitar latencias
 df_cache = None
 wcss_cache = None  
 
@@ -36,10 +43,10 @@ def obtener_datos():
             print("=" * 60)
             print(f"LOG OLAP: Estableciendo conexión nativa con Azure SQL [{DB_CONFIG['database']}]...")
             
-            # Conexión directa mediante pymssql optimizada con el Puerto Estándar de Azure
+            # Conexión directa y limpia mediante pymssql (Azure negocia el SSL automáticamente)
             conexion = pymssql.connect(
                 server=DB_CONFIG['server'],
-                port=1433,                                  # Mapeo de puerto explícito para evitar caídas de red
+                port=1433,
                 user=DB_CONFIG['username'],
                 password=DB_CONFIG['password'],
                 database=DB_CONFIG['database'],
@@ -47,6 +54,7 @@ def obtener_datos():
                 autocommit=True
             )
             
+            # CONSULTA MULTIDIMENSIONAL DIRECTA CONTRA TU ESQUEMA ESTRELLA MIGRADO
             query = """
                 SELECT 
                     t.Fecha AS [Fecha],
@@ -75,6 +83,7 @@ def obtener_datos():
             print(f"LOG OLAP: Ingesta exitosa. Procesando {len(df)} registros en memoria RAM...")
             df.columns = [c.strip() for c in df.columns]
 
+            # --- PROCESAMIENTO DEL HECHO: TOTAL IMPLICADOS ---
             df['CantIncidentes'] = pd.to_numeric(df['CantIncidentes'], errors='coerce').fillna(0)
             df['CantHeridos'] = pd.to_numeric(df['CantHeridos'], errors='coerce').fillna(0)
             df['CantMuertos'] = pd.to_numeric(df['CantMuertos'], errors='coerce').fillna(0)
