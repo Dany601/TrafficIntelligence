@@ -47,7 +47,6 @@ def obtener_datos():
                 autocommit=True
             )
             
-            # CONSULTA MULTIDIMENSIONAL DIRECTA CONTRA TU ESQUEMA ESTRELLA MIGRADO
             query = """
                 SELECT 
                     t.Fecha AS [Fecha],
@@ -76,7 +75,6 @@ def obtener_datos():
             print(f"LOG OLAP: Ingesta exitosa. Procesando {len(df)} registros en memoria RAM...")
             df.columns = [c.strip() for c in df.columns]
 
-            # --- PROCESAMIENTO DEL HECHO: TOTAL IMPLICADOS ---
             df['CantIncidentes'] = pd.to_numeric(df['CantIncidentes'], errors='coerce').fillna(0)
             df['CantHeridos'] = pd.to_numeric(df['CantHeridos'], errors='coerce').fillna(0)
             df['CantMuertos'] = pd.to_numeric(df['CantMuertos'], errors='coerce').fillna(0)
