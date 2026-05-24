@@ -6,7 +6,7 @@ from flask import Flask, render_template, request
 import io
 import base64
 import time
-import pyodbc  # Conector nativo de alto rendimiento para SQL Server
+import pyodbc  
 
 # Machine Learning
 from sklearn.preprocessing import StandardScaler
@@ -20,60 +20,69 @@ import seaborn as sns
 
 app = Flask(__name__)
 
-# --- 1. CONFIGURACIÓN EXACTA CON TU INSTANCIA DE SQL SERVER ---
+# --- 1. CONFIGURACIÓN EXACTA CON TU INSTANCIA DE AZURE SQL DATABASE ---
 DB_CONFIG = {
-    "server": "localhost\\MSSQLSERVER03",     # Sincronizado con tu servidor físico
-    "database": "TrafficIntelligence",       # Nombre real de tu Base de Datos (SSMS)
-    "username": "",                          # Vacío para Autenticación de Windows
-    "password": ""
+    "server": "bogotatraffic-dbserver.database.windows.net",  # Servidor en la nube
+    "database": "TrafficIntelligence",                      # Tu BD en Azure
+    "username": "traffic_admin",                            # Tu usuario de Azure
+    "password": "Abie2004"                     # <-- REEMPLAZA CON TU CONTRASEÑA REAL
 }
 
+# Variables de caché global para evitar latencia innecesaria por internet
 df_cache = None
+wcss_cache = None  # Cache analítico para optimizar el Método del Codo
 
 # Columnas requeridas para renderizar las vistas dinámicas de la tabla en index.html
-COLS_DISPLAY = ['Fecha incidente', 'Hora', 'Localidad', 'Total_Implicados']
+COLS_DISPLAY = ['Fecha', 'Hora', 'Localidad', 'Total_Implicados']
 
 def obtener_datos():
     global df_cache
     if df_cache is None:
         try:
             print("=" * 60)
-            print(f"LOG OLAP: Estableciendo conexión con SQL Server [{DB_CONFIG['database']}]...")
+            print(f"LOG OLAP: Estableciendo conexión con Azure SQL Database [{DB_CONFIG['database']}]...")
             
-            # Construcción dinámica del Connection String seguro (Autenticación de Windows)
+            # Cadena de conexión parametrizada con los protocolos de seguridad de Azure
             conn_str = (
                 f"DRIVER={{ODBC Driver 17 for SQL Server}};"
                 f"SERVER={DB_CONFIG['server']};"
                 f"DATABASE={DB_CONFIG['database']};"
-                f"Trusted_Connection=yes;"
-                f"TrustServerCertificate=yes;"
+                f"UID={DB_CONFIG['username']};"
+                f"PWD={DB_CONFIG['password']};"
+                f"Encrypt=yes;"                      # <-- CRÍTICO: Cifra los datos en tránsito por internet
+                f"TrustServerCertificate=no;"        # <-- CRÍTICO: Valida la identidad del servidor de Azure
+                f"Connection Timeout=30;"            # Espera prudente para redes en la nube
             )
 
             conexion = pyodbc.connect(conn_str)
             
-            # CONSULTA MULTIDIMENSIONAL DIRECTA (Fusión de hechos y dimensiones analíticas para el core)
+            # CONSULTA MULTIDIMENSIONAL DIRECTA CONTRA TU ESQUEMA ESTRELLA EN LA NUBE
             query = """
                 SELECT 
-                    t.Fecha AS [Fecha incidente],
+                    t.Fecha AS [Fecha],
                     t.Hora AS [Hora],
+                    t.RangoHorario AS [Rango Horario],
                     u.Localidad AS [Localidad],
+                    u.Barrio AS [Barrio],
+                    v.TipoVehiculo AS [Vehículo],
                     f.CantIncidentes,
                     f.CantHeridos,
                     f.CantMuertos
                 FROM Fact_Incidente f
                 INNER JOIN Dim_Tiempo t ON f.IdFecha = t.IdFecha
                 INNER JOIN Dim_Ubicacion u ON f.IdUbicacion = u.IdUbicacion
+                INNER JOIN Dim_Vehiculo v ON f.IdVehiculo = v.IdVehiculo
             """
             
-            print("LOG OLAP: Consumiendo datos relacionales estructurados...")
+            print("LOG OLAP: Consumiendo datos relacionales desde la infraestructura cloud...")
             df = pd.read_sql(query, conexion)
             conexion.close() 
             
             if df.empty:
-                print("❌ LOG ADVERTENCIA: La base de datos está vacía o el Query falló.")
+                print("❌ LOG ADVERTENCIA: La base de datos en Azure está vacía o el Query falló.")
                 return None
 
-            print(f"LOG OLAP: Ingesta exitosa. Procesando {len(df)} registros en memoria RAM...")
+            print(f"LOG OLAP: Ingesta cloud exitosa. Procesando {len(df)} registros en memoria RAM...")
             df.columns = [c.strip() for c in df.columns]
 
             # --- 1. PROCESAMIENTO DEL HECHO: TOTAL IMPLICADOS ---
@@ -91,7 +100,7 @@ def obtener_datos():
                 hora_dt = hora_dt.fillna(pd.to_datetime(df['Hora'], format='%H:%M:%S', errors='coerce'))
                 df['Hora_Num'] = hora_dt.dt.hour
 
-            # --- COMPRESIÓN EN float32 Y LÍMITES LÓGICOS ---
+            # COMPRESIÓN EN float32 Y LÍMITES LÓGICOS (Ahorro defensivo de memoria)
             df['Hora_Num'] = pd.to_numeric(df['Hora_Num'], errors='coerce').fillna(12).astype('float32')
             df['Total_Implicados'] = df['Total_Implicados'].astype('float32')
             
@@ -99,7 +108,6 @@ def obtener_datos():
             df.loc[df['Hora_Num'] > 23, 'Hora_Num'] = 23
             df.loc[df['Total_Implicados'] <= 0, 'Total_Implicados'] = 1.0
 
-            df = df.rename(columns={'Fecha incidente': 'Fecha', 'Hora': 'Hora', 'Localidad': 'Localidad'})
             df = df.dropna(subset=['Hora_Num', 'Total_Implicados'])
             df_cache = df
             gc.collect() 
@@ -109,7 +117,7 @@ def obtener_datos():
         except Exception as e:
             import traceback
             print("=" * 60)
-            print(f"❌ LOG ERROR: Error crítico en el pipeline multidimensional: {e}")
+            print(f"❌ LOG ERROR: Error crítico en el pipeline multidimensional cloud: {e}")
             traceback.print_exc()
             print("=" * 60)
             return None
@@ -125,6 +133,7 @@ def fig_to_base64(plt_obj):
     return data
 
 def procesar_dashboard(k_usuario):
+    global wcss_cache
     df_clean = obtener_datos()
     if df_clean is None or len(df_clean) == 0: 
         return None
@@ -136,17 +145,19 @@ def procesar_dashboard(k_usuario):
         X_scaled = scaler.fit_transform(X).astype('float32')
         del X
 
-        # 1. ANÁLISIS DE INERCIA (MÉTODO DEL CODO)
-        wcss = []
-        for i in range(1, 11):
-            km = KMeans(n_clusters=i, init='k-means++', random_state=42, n_init=3)
-            km.fit(X_scaled)
-            wcss.append(int(km.inertia_))
+        # --- OPTIMIZACIÓN SENSACIONAL: MÉTODO DEL CODO EN CACHÉ DE MEMORIA ---
+        if wcss_cache is None:
+            print("LOG ML: Calculando curvas de inercia por primera vez sobre datos cloud...")
+            wcss_cache = []
+            for i in range(1, 11):
+                km = KMeans(n_clusters=i, init='k-means++', random_state=42, n_init=3)
+                km.fit(X_scaled)
+                wcss_cache.append(int(km.inertia_))
             del km
 
         k_sugerido = 4
         plt.figure(figsize=(8, 4))
-        plt.plot(range(1, 11), wcss, marker='o', color='#3b82f6', linewidth=2)
+        plt.plot(range(1, 11), wcss_cache, marker='o', color='#3b82f6', linewidth=2)
         plt.axvline(x=k_sugerido, color='#ef4444', linestyle='--', label=f'Codo Sugerido (K={k_sugerido})')
         plt.title('Análisis de Inercia (Método del Codo)')
         plt.xlabel('Número de Clústeres (K)')
@@ -159,7 +170,7 @@ def procesar_dashboard(k_usuario):
         cluster_ids = kmeans_final.fit_predict(X_scaled)
         cluster_labels = np.array([f'Grupo {x}' for x in cluster_ids])
 
-        # 3. GENERACIÓN DE TABLAS DINÁMICAS EN FORMATO HTML (Muestra Index)
+        # 3. GENERACIÓN DE TABLAS DINÁMICAS EN FORMATO HTML
         cols_display_reales = ['Fecha', 'Hora', 'Localidad', 'Total_Implicados']
         tabla_original_html = df_clean[cols_display_reales].head(10).to_html(
             classes='table table-hover align-middle m-0', index=False, border=0
@@ -201,7 +212,7 @@ def procesar_dashboard(k_usuario):
         plt.ylabel('Centroide Implicados')
         plt.legend()
         img_centroide = fig_to_base64(plt)
-        del hora_plot, impl_plot, centroids
+        del hora_plot, impl_plot, centroids, X_scaled
         
         # 6. HISTORIAL DE CONVERGENCIA
         num_pasos = kmeans_final.n_iter_
@@ -216,7 +227,7 @@ def procesar_dashboard(k_usuario):
         return {
             "tabla_original": tabla_original_html,
             "tabla_preview": tabla_resultados_html,
-            "metodo": {"img": img_metodo, "inercias": wcss, "k_sugerido": k_sugerido},
+            "metodo": {"img": img_metodo, "inercias": wcss_cache, "k_sugerido": k_sugerido},
             "cluster": {"img": img_cluster, "conteo": {f'Grupo {k}': int(v) for k, v in zip(*np.unique(cluster_ids, return_counts=True))}},
             "centroide": {"img": img_centroide},
             "preparacion": {"total_filas": len(df_clean), "variables": ['Hora_Num', 'Total_Implicados']},
@@ -244,11 +255,10 @@ def index():
     dashboard_data = procesar_dashboard(k_val)
     
     if df is not None and dashboard_data:
-        columnas_reales = df.columns.tolist()
-        filas_reales = df.head(50).values.tolist()
+        columnas_reales = ['Fecha', 'Hora', 'Localidad', 'Total_Implicados']
+        filas_reales = df[columnas_reales].head(50).values.tolist()
         total_filas_reales = len(df)
         
-        # Obtenemos las localidades únicas para que los selectores del include no queden vacíos
         localidades_unicas = sorted(df['Localidad'].unique().tolist()) if 'Localidad' in df.columns else []
         rangos_unicos = ["Hora Pico Mañana", "Hora Valle", "Hora Pico Tarde", "Hora Nocturna"]
         
@@ -260,23 +270,21 @@ def index():
             filas=filas_reales,
             total_registros=total_filas_reales,
             
-            # --- SOLUCIÓN CRÍTICA: Inyectamos las variables al index para sanar el {% include %} ---
             tabla_dinamica_olap=None,
             localidades=localidades_unicas,
             rangos=rangos_unicos,
             localidad_sel='',
             rango_sel='',
-            total_resultados=0  # Al valer 0, el bloque {% if total_resultados > 0 %} se evalúa falso y no falla
+            total_resultados=0  
         )
-    return "Error crítico: El pipeline de datos está vacío o SQL Server no responde.", 500
-# --- 2. RUTA BASE DEL MODELO MULTIDIMENSIONAL (Carga Inicial Limpia) ---
+    return "Error crítico: El pipeline de datos está vacío o Azure SQL no responde.", 500
+
 @app.route('/modelo-multidimensional')
 def mostrar_modelo_multidimensional():
     df_base = obtener_datos()
     localidades_unicas = sorted(df_base['Localidad'].unique().tolist()) if df_base is not None else []
     rangos_unicos = ["Hora Pico Mañana", "Hora Valle", "Hora Pico Tarde", "Hora Nocturna"]
     
-    # IMPORTANTE: total_resultados=0 evita el UndefinedError en la carga inicial de multidimensional.html
     return render_template(
         'multidimensional.html', 
         tabla_dinamica_olap=None,
@@ -287,57 +295,26 @@ def mostrar_modelo_multidimensional():
         total_resultados=0  
     )
 
-# --- 3. RUTA GET DEL FILTRADO EN CALIENTE DIRECTO A TU ESQUEMA ESTRELLA ---
-# Reemplaza únicamente tu ruta de consulta final en app.py por esta versión unificada:
-
 @app.route('/modelo-multidimensional/consulta', methods=['GET'])
 def consulta_dinamica_olap():
     try:
-        # 1. Capturar los filtros desde los selectores del formulario HTML
         filtro_localidad = request.args.get('localidad', default='', type=str).strip()
         filtro_rango = request.args.get('rango', default='', type=str).strip()
 
-        # 2. Conectar de forma segura a SQL Server
-        conn_str = (
-            f"DRIVER={{ODBC Driver 17 for SQL Server}};"
-            f"SERVER={DB_CONFIG['server']};"
-            f"DATABASE={DB_CONFIG['database']};"
-            f"Trusted_Connection=yes;"
-            f"TrustServerCertificate=yes;"
-        )
-        conexion = pyodbc.connect(conn_str)
-
-        # 3. Query dinámico parametrizado contra tus tablas reales de SSMS
-        query = """
-            SELECT 
-                t.Fecha AS [Fecha],
-                t.Hora AS [Hora],
-                t.RangoHorario AS [Rango Horario],
-                u.Localidad AS [Localidad],
-                u.Barrio AS [Barrio],
-                v.TipoVehiculo AS [Vehículo],
-                f.CantIncidentes AS [Siniestros],
-                f.CantHeridos AS [Heridos],
-                f.CantMuertos AS [Fatalidades]
-            FROM Fact_Incidente f
-            INNER JOIN Dim_Tiempo t ON f.IdFecha = t.IdFecha
-            INNER JOIN Dim_Ubicacion u ON f.IdUbicacion = u.IdUbicacion
-            INNER JOIN Dim_Vehiculo v ON f.IdVehiculo = v.IdVehiculo
-            WHERE 1=1
-        """
-        params = []
+        # Usamos eficientemente el df en memoria para el filtrado dinámico
+        df_base = obtener_datos()
+        if df_base is None:
+            return "Error: Almacén de datos vacío", 500
+            
+        df_res = df_base.copy()
+        
         if filtro_localidad:
-            query += " AND u.Localidad = ?"
-            params.append(filtro_localidad)
+            df_res = df_res[df_res['Localidad'] == filtro_localidad]
         if filtro_rango:
-            query += " AND t.RangoHorario = ?"
-            params.append(filtro_rango)
+            df_res = df_res[df_res['Rango Horario'] == filtro_rango]
 
-        query += " ORDER BY t.Fecha DESC"
-        df_res = pd.read_sql(query, conexion, params=params)
-        conexion.close()
+        df_res = df_res.sort_values(by='Fecha', ascending=False)
 
-        # 4. Parsear la respuesta relacional a estructura HTML vestida con Bootstrap
         if df_res.empty:
             tabla_html = (
                 '<div class="alert alert-warning text-center my-3">'
@@ -347,35 +324,28 @@ def consulta_dinamica_olap():
             )
             total_filas = 0
         else:
-            tabla_html = df_res.head(30).to_html(
+            cols_olap_view = ['Fecha', 'Hora', 'Rango Horario', 'Localidad', 'Barrio', 'Vehículo', 'CantIncidentes', 'CantHeridos', 'CantMuertos']
+            tabla_html = df_res[cols_olap_view].head(30).to_html(
                 classes='table table-hover table-striped align-middle text-center border-light-subtle small m-0', 
                 index=False, 
                 border=0
             )
             total_filas = len(df_res)
 
-        # 5. Cargar los catálogos base para mantener los selectores HTML poblados
-        df_base = obtener_datos()
-        localidades_unicas = sorted(df_base['Localidad'].unique().tolist()) if df_base is not None else []
+        localidades_unicas = sorted(df_base['Localidad'].unique().tolist())
         rangos_unicos = ["Hora Pico Mañana", "Hora Valle", "Hora Pico Tarde", "Hora Nocturna"]
 
-        # 6. Ejecutar el core del clúster (K=4) para que la parte superior de la página no quede en blanco
         dashboard_data = procesar_dashboard(4)
-
-        gc.collect() # Liberador de RAM defensivo
+        gc.collect() 
         
-        # --- EL CAMBIO MAESTRO ---
-        # Volvemos a renderizar 'index.html' completo. Así se inyectan los estilos, las gráficas superiores
-        # y la tabla multidimensional abajo en su lugar exacto sin desarmar la pantalla.
         return render_template(
             'index.html', 
             d=dashboard_data, 
             current_k=4,
-            columnas=df_base.columns.tolist() if df_base is not None else [], 
-            filas=df_base.head(50).values.tolist() if df_base is not None else [], 
-            total_registros=len(df_base) if df_base is not None else 0,
+            columnas=['Fecha', 'Hora', 'Localidad', 'Total_Implicados'], 
+            filas=df_base[['Fecha', 'Hora', 'Localidad', 'Total_Implicados']].head(50).values.tolist(), 
+            total_registros=len(df_base),
             
-            # Variables de control que lee multidimensional.html
             tabla_dinamica_olap=tabla_html,
             localidades=localidades_unicas, 
             rangos=rangos_unicos,
