@@ -6,13 +6,10 @@ from flask import Flask, render_template, request
 import io
 import base64
 import time
-import pymssql  # Conector nativo compatible con Render Free (Sin drivers de sistema)
-
-# Machine Learning
+import pymssql  
 from sklearn.preprocessing import StandardScaler
 from sklearn.cluster import KMeans
 
-# Gráficas en segundo plano
 import matplotlib
 matplotlib.use('Agg') 
 import matplotlib.pyplot as plt
@@ -20,17 +17,13 @@ import seaborn as sns
 
 app = Flask(__name__)
 
-# --- 1. CONFIGURACIÓN DE CONEXIÓN A AZURE SQL (HÍBRIDA Y SEGURA) ---
-# En la nube leerá el panel de Render, en tu PC usará lo que escribas en las comillas.
 DB_CONFIG = {
     "server": os.environ.get("DB_SERVER", "bogotatraffic-dbserver.database.windows.net"), 
     "database": os.environ.get("DB_DATABASE", "TrafficIntelligence"),       
-    # Se incluye el sufijo del servidor exigido por el protocolo TDS de pymssql en Azure
     "username": os.environ.get("DB_USERNAME", "traffic_admin@bogotatraffic-dbserver"),                          
     "password": os.environ.get("DB_PASSWORD", "Abie2004")  
 }
 
-# Almacenamiento en caché global para proteger el rendimiento cloud y evitar latencias
 df_cache = None
 wcss_cache = None  
 
@@ -43,18 +36,16 @@ def obtener_datos():
             print("=" * 60)
             print(f"LOG OLAP: Estableciendo conexión nativa con Azure SQL [{DB_CONFIG['database']}]...")
             
-            # Conexión directa y limpia mediante pymssql (Azure negocia el SSL automáticamente)
             conexion = pymssql.connect(
                 server=DB_CONFIG['server'],
                 port=1433,
                 user=DB_CONFIG['username'],
                 password=DB_CONFIG['password'],
                 database=DB_CONFIG['database'],
-                as_dict=False,                              # Estructura requerida para la ingesta nativa de Pandas
+                as_dict=False,                              
                 autocommit=True
             )
             
-            # CONSULTA MULTIDIMENSIONAL DIRECTA CONTRA TU ESQUEMA ESTRELLA MIGRADO
             query = """
                 SELECT 
                     t.Fecha AS [Fecha],
@@ -83,13 +74,11 @@ def obtener_datos():
             print(f"LOG OLAP: Ingesta exitosa. Procesando {len(df)} registros en memoria RAM...")
             df.columns = [c.strip() for c in df.columns]
 
-            # --- PROCESAMIENTO DEL HECHO: TOTAL IMPLICADOS ---
             df['CantIncidentes'] = pd.to_numeric(df['CantIncidentes'], errors='coerce').fillna(0)
             df['CantHeridos'] = pd.to_numeric(df['CantHeridos'], errors='coerce').fillna(0)
             df['CantMuertos'] = pd.to_numeric(df['CantMuertos'], errors='coerce').fillna(0)
             df['Total_Implicados'] = df['CantIncidentes'] + df['CantHeridos'] + df['CantMuertos']
 
-            # --- PROCESAMIENTO DE LA DIMENSIÓN TEMPORAL: HORA NUMÉRICA ---
             df['Hora'] = df['Hora'].astype(str).str.strip()
             df['Hora_Num'] = pd.to_numeric(df['Hora'].str.extract(r'^(\d+)')[0], errors='coerce')
             
@@ -98,7 +87,6 @@ def obtener_datos():
                 hora_dt = hora_dt.fillna(pd.to_datetime(df['Hora'], format='%H:%M:%S', errors='coerce'))
                 df['Hora_Num'] = hora_dt.dt.hour
 
-            # Compresión óptima de memoria para servidores compartidos
             df['Hora_Num'] = pd.to_numeric(df['Hora_Num'], errors='coerce').fillna(12).astype('float32')
             df['Total_Implicados'] = df['Total_Implicados'].astype('float32')
             
@@ -142,7 +130,6 @@ def procesar_dashboard(k_usuario):
         scaler = StandardScaler()
         X_scaled = scaler.fit_transform(X).astype('float32')
 
-        # --- OPTIMIZACIÓN: MÉTODO DEL CODO CACHEADO (Evita recalcular por internet en cada petición) ---
         if wcss_cache is None:
             print("LOG ML: Calculando curvas de inercia por primera vez desde Azure...")
             wcss_cache = []
@@ -162,12 +149,10 @@ def procesar_dashboard(k_usuario):
         plt.legend()
         img_metodo = fig_to_base64(plt)
 
-        # 2. EJECUCIÓN DEL ALGORITMO K-MEANS FINAL
         kmeans_final = KMeans(n_clusters=k_usuario, init='k-means++', max_iter=300, random_state=42, n_init=10)
         cluster_ids = kmeans_final.fit_predict(X_scaled)
         cluster_labels = np.array([f'Grupo {x}' for x in cluster_ids])
 
-        # 3. GENERACIÓN DE TABLAS DINÁMICAS EN FORMATO HTML
         cols_display_reales = ['Fecha', 'Hora', 'Localidad', 'Total_Implicados']
         tabla_original_html = df_clean[cols_display_reales].head(10).to_html(
             classes='table table-hover align-middle m-0', index=False, border=0
@@ -181,7 +166,6 @@ def procesar_dashboard(k_usuario):
         )
         del df_muestra
 
-        # 4. GRÁFICA DE DISPERSIÓN DE GRUPOS (Jittering)
         orden_leyenda = [f'Grupo {i}' for i in range(k_usuario)]
         idx_plot = np.random.default_rng(42).choice(len(df_clean), size=min(500, len(df_clean)), replace=False)
         hora_plot = np.asarray(df_clean['Hora_Num'].values[idx_plot], dtype='float32')
@@ -199,7 +183,6 @@ def procesar_dashboard(k_usuario):
         img_cluster = fig_to_base64(plt)
         del jitter_x, jitter_y, labels_plot
 
-        # 5. CARTOGRAFÍA GEOMÉTRICA DE CENTROIDES
         centroids = scaler.inverse_transform(kmeans_final.cluster_centers_)
         plt.figure(figsize=(8, 5))
         plt.scatter(hora_plot, impl_plot, c='lightgray', s=20, alpha=0.3, label='Siniestros')
@@ -211,7 +194,6 @@ def procesar_dashboard(k_usuario):
         img_centroide = fig_to_base64(plt)
         del hora_plot, impl_plot, centroids, X_scaled
         
-        # 6. HISTORIAL DE CONVERGENCIA
         num_pasos = kmeans_final.n_iter_
         evolucion_lista = []
         for i in range(num_pasos + 1):
@@ -354,5 +336,6 @@ def consulta_dinamica_olap():
         return f"Error interno en el servidor analítico: {e}", 500
 
 if __name__ == '__main__':
+
     port = int(os.environ.get('PORT', 5000))
     app.run(host='0.0.0.0', port=port, debug=True)
