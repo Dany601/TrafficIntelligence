@@ -1,0 +1,84 @@
+<section id="spark" class="py-5 text-white" style="background-color: #0b0f19;">
+    <div class="container">
+        <div class="text-center mb-5">
+            <span class="badge bg-warning text-dark px-3 py-2 rounded-pill mb-2 fw-bold">PROCESAMIENTO CLÚSTER DISTRIBUIDO</span>
+            <h2 class="fw-bold display-5 text-white">Procesamiento Masivo con <span class="text-warning">Apache Spark</span></h2>
+            <p class="text-white-50 mx-auto" style="max-width: 800px;">
+                Implementación de un motor distribuido mediante <strong>PySpark DataFrames</strong> para el cálculo en memoria RAM de matrices complejas de co-ocurrencia e Índices de Riesgo Vial por localidad.
+            </p>
+        </div>
+
+        <div class="row justify-content-center mb-5">
+            <div class="col-md-10 col-lg-8">
+                <div class="card border-0 shadow-lg bg-dark text-white rounded-4 overflow-hidden border-start border-warning border-4 p-4">
+                    <div class="d-flex align-items-center mb-3">
+                        <div class="bg-warning text-dark rounded-circle p-2.5 me-3">
+                            <i class="bi bi-cpu-fill fs-4"></i>
+                        </div>
+                        <div>
+                            <h5 class="fw-bold m-0 text-white">Spark Cluster Status: <span class="text-success small"><i class="bi bi-circle-fill me-1 small"></i> Activo (Local Master)</span></h5>
+                            <p class="small text-white-50 m-0 mt-0.5">Configuración de hilos optimizada en precisión simple (`local[*]`) con recolección de basura vectorial.</p>
+                        </div>
+                    </div>
+                    
+                    <div class="p-3 bg-black bg-opacity-40 rounded-3 border border-secondary border-opacity-25">
+                        <strong class="text-warning small d-block mb-1"><i class="bi bi-terminal-fill me-1"></i>Fórmula de Scoring Heurístico en Memoria:</strong>
+                        <p class="small text-white-50 m-0 text-justify font-monospace" style="font-size: 0.85rem;">
+                            Índice de Riesgo = (Suma(CantHeridos) * 2 + Suma(CantMuertos) * 5) / Conteo(Siniestros)
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="row justify-content-center">
+            <div class="col-md-11 col-lg-9">
+                <div class="card border-0 shadow-2xl rounded-4 overflow-hidden" style="background-color: #111827; border: 1px solid rgba(255,255,255,0.05);">
+                    <div class="card-header bg-dark border-bottom border-secondary border-opacity-25 py-3 d-flex justify-content-between align-items-center">
+                        <span class="small fw-bold text-white-50"><i class="bi bi-lightning-charge-fill text-warning me-2"></i>Matriz de Riesgo Consolidada por el Motor Distribuido</span>
+                        <span class="badge bg-dark border border-secondary border-opacity-50 text-warning rounded-pill">PySpark Core DataFrame</span>
+                    </div>
+                    <div class="table-responsive" style="max-height: 400px; overflow-y: auto;">
+                        {% if tabla_spark_html %}
+                            {{ tabla_spark_html|safe }}
+                        {% else %}
+                            <div class="p-5 text-center text-muted">
+                                <i class="bi bi-exclamation-octagon display-4 text-danger d-block mb-2"></i>
+                                <p class="m-0 fw-bold">Fallo en la comunicación con el Worker de PySpark</p>
+                            </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </div>
+</section>
+
+<style>
+    #spark .table {
+        color: #e5e7eb !important;
+        background-color: #111827 !important;
+        margin: 0 !important;
+    }
+    #spark .table th {
+        background-color: #1f2937 !important;
+        color: #f59e0b !important;
+        font-weight: 600;
+        text-transform: uppercase;
+        font-size: 0.8rem;
+        letter-spacing: 0.5px;
+        border-bottom: 2px solid rgba(245, 158, 11, 0.2) !important;
+    }
+    #spark .table td {
+        border-bottom: 1px solid rgba(255, 255, 255, 0.05) !important;
+        font-size: 0.85rem;
+    }
+    #spark .table-striped tbody tr:nth-of-type(odd) {
+        background-color: rgba(255, 255, 255, 0.02) !important;
+    }
+    #spark .table-hover tbody tr:hover {
+        background-color: rgba(245, 158, 11, 0.05) !important;
+        transition: background-color 0.2s ease;
+    }
+</style>
