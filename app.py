@@ -6,13 +6,9 @@ from flask import Flask, render_template, request
 import io
 import base64
 import time
-import pymssql  # Conector nativo compatible con Render Free (Sin drivers de sistema)
-
-# Machine Learning
+import pymssql  
 from sklearn.preprocessing import StandardScaler
 from sklearn.cluster import KMeans
-
-# Gráficas en segundo plano
 import matplotlib
 matplotlib.use('Agg') 
 import matplotlib.pyplot as plt
@@ -20,17 +16,14 @@ import seaborn as sns
 
 app = Flask(__name__)
 
-# --- 1. CONFIGURACIÓN DE CONEXIÓN A AZURE SQL (HÍBRIDA Y SEGURA) ---
-# En la nube leerá el panel de Render, en tu PC usará lo que escribas en las comillas.
+
 DB_CONFIG = {
     "server": os.environ.get("DB_SERVER", "bogotatraffic-dbserver.database.windows.net"), 
     "database": os.environ.get("DB_DATABASE", "TrafficIntelligence"),       
-    # Se incluye el sufijo del servidor exigido por el protocolo TDS de pymssql en Azure
     "username": os.environ.get("DB_USERNAME", "traffic_admin@bogotatraffic-dbserver"),                          
-    "password": os.environ.get("DB_PASSWORD", "Abie2004")  # <-- Pon tu clave de Azure aquí para probar en tu PC
+    "password": os.environ.get("DB_PASSWORD", "Abie2004") 
 }
 
-# Almacenamiento en caché global para proteger el rendimiento cloud y evitar latencias
 df_cache = None
 wcss_cache = None  
 
