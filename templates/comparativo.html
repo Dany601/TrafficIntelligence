@@ -1,0 +1,224 @@
+<section id="comparativo" class="py-5 bg-white">
+    <div class="bi-container">
+        <div class="bi-header">
+            <h2>Ecosistema Analítico Multidimensional</h2>
+            <p>Contraste metodológico, técnico y operativo de los cuatro niveles de conocimiento implementados en Bogotá Traffic Intelligence.</p>
+        </div>
+
+            
+            <div class="bi-card border-evidente">
+                <div class="bi-card-header bg-evidente">
+                    <h3>1. Conocimiento Evidente</h3>
+                    <span class="bi-badge">Power BI</span>
+                </div>
+                <div class="bi-card-body">
+                    <p class="bi-purpose"><strong>Propósito:</strong> Analítica descriptiva y visualización de alertas tempranas en la malla vial.</p>
+                    <ul class="bi-list">
+                        <li><strong>Volumen:</strong> Muestra estratégica (1,000 incidentes).</li>
+                        <li><strong>Ventaja:</strong> Inmediatez en la democratización del dato para tomadores de decisiones.</li>
+                        <li><strong>Desventaja:</strong> Superficialidad; carece de capacidad predictiva o interacciones no lineales.</li>
+                        <li><strong>Foco Crítico:</strong> Alta densidad macro en Suba, Engativá y Usaquén.</li>
+                    </ul>
+                </div>
+            </div>
+
+            <div class="bi-card border-multidimensional">
+                <div class="bi-card-header bg-multidimensional">
+                    <h3>2. Conocimiento Multidimensional</h3>
+                    <span class="bi-badge">Minería de Datos</span>
+                </div>
+                <div class="bi-card-body">
+                    <p class="bi-purpose"><strong>Propósito:</strong> Segmentación no supervisada (k-Means) y clasificación de riesgo (Random Forest).</p>
+                    <ul class="bi-list">
+                        <li><strong>Volumen:</strong> Bitácora intermedia (71,184 instancias).</li>
+                        <li><strong>Ventaja:</strong> Rigurosidad científica sin sesgo humano. Métricas robustas (AUC: 0.987, CA: 92.4%).</li>
+                        <li><strong>Desventaja:</strong> Complejidad de interpretación del modelo de ensamble (Caja Negra).</li>
+                        <li><strong>Reto Técnico:</strong> Desbalance urbano en la clasificación del Cluster 1 (Siniestros Críticos).</li>
+                    </ul>
+                </div>
+            </div>
+
+            <div class="bi-card border-oculto">
+                <div class="bi-card-header bg-oculto">
+                    <h3>3. Conocimiento Oculto</h3>
+                    <span class="bi-badge">Modelo OLAP</span>
+                </div>
+                <div class="bi-card-body">
+                    <p class="bi-purpose"><strong>Propósito:</strong> Navegación relacional e interactiva a través de un Modelo Estrella.</p>
+                    <ul class="bi-list">
+                        <li><strong>Volumen:</strong> Histórico acumulado y consolidado (Series 2022 - 2025).</li>
+                        <li><strong>Ventaja:</strong> Análisis de causa raíz quirúrgico por tramos viales específicos y perfiles de flota.</li>
+                        <li><strong>Desventaja:</strong> Rigidez estructural; alto costo de reconstrucción si cambian las dimensiones.</li>
+                        <li><strong>Hallazgo:</strong> Letalidad crítica en Bicicletas y quiebre de tendencia de -31.8% en 2025.</li>
+                    </ul>
+                </div>
+            </div>
+
+            <div class="bi-card border-profundo">
+                <div class="bi-card-header bg-profundo">
+                    <h3>4. Conocimiento Profundo</h3>
+                    <span class="bi-badge">PySpark / Clúster</span>
+                </div>
+                <div class="bi-card-body">
+                    <p class="bi-purpose"><strong>Propósito:</strong> Procesamiento poblacional distribuido in-memory y despliegue en backend web.</p>
+                    <ul class="bi-list">
+                        <li><strong>Volumen:</strong> Big Data poblacional completo (120,599 registros).</li>
+                        <li><strong>Ventaja:</strong> Arquitectura de alto rendimiento (Gráficas optimizadas en RAM vía Base64).</li>
+                        <li><strong>Desventaja:</strong> Costo de sobrecarga de red (Network Overhead) en datasets pequeños (22.6 MB).</li>
+                        <li><strong>Foco Crítico:</strong> Volumetría masiva absoluta detectada en la localidad de Kennedy (20,621 casos).</li>
+                    </ul>
+                </div>
+            </div>
+
+        </div>
+    </div>
+</section>
+
+<style>
+    :root {
+        --primary-dark: #1e293b;
+        --text-main: #334155;
+        --bg-light: #f8fafc;
+        --evidente-color: #2563eb;
+        --multidimensional-color: #0d9488;
+        --oculto-color: #d97706;
+        --profundo-color: #7c3aed;
+    }
+
+    .bi-comparison-section {
+        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        background-color: var(--bg-light) !important;
+        padding: 50px 20px !important;
+        color: var(--text-main) !important;
+    }
+
+    .bi-container {
+        max-width: 1100px !important;
+        margin: 0 auto !important;
+    }
+
+    .bi-header {
+        text-align: center !important;
+        margin-bottom: 40px !important;
+    }
+
+    .bi-header h2 {
+        color: var(--primary-dark) !important;
+        font-size: 2.5rem !important;
+        margin-bottom: 10px !important;
+        font-weight: 700 !important;
+    }
+
+    .bi-header p {
+        font-size: 1.1rem !important;
+        color: #64748b !important;
+    }
+
+    .bi-grid {
+        display: grid !important;
+        grid-template-columns: repeat(2, 1fr) !important;
+        gap: 30px !important;
+    }
+
+    @media (max-width: 768px) {
+        .bi-grid {
+            grid-template-columns: 1fr !important;
+            gap: 20px !important;
+        }
+    }
+
+    .bi-card {
+        background: #ffffff !important;
+        border-radius: 12px !important;
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06) !important;
+        overflow: hidden !important;
+        transition: transform 0.3s ease, box-shadow 0.3s ease !important;
+        display: flex !important;
+        flex-direction: column !important;
+        border-top: 5px solid !important;
+    }
+
+    .bi-card:hover {
+        transform: translateY(-5px) !important;
+        box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -4px rgba(0, 0, 0, 0.1) !important;
+    }
+
+    .border-evidente { border-top-color: var(--evidente-color) !important; }
+    .border-multidimensional { border-top-color: var(--multidimensional-color) !important; }
+    .border-oculto { border-top-color: var(--oculto-color) !important; }
+    .border-profundo { border-top-color: var(--profundo-color) !important; }
+
+    .bi-card-header {
+        padding: 20px !important;
+        color: white !important;
+        display: flex !important;
+        justify-content: space-between !important;
+        align-items: center !important;
+    }
+
+    .bg-evidente { background-color: var(--evidente-color) !important; }
+    .bg-multidimensional { background-color: var(--multidimensional-color) !important; }
+    .bg-oculto { background-color: var(--oculto-color) !important; }
+    .bg-profundo { background-color: var(--profundo-color) !important; }
+
+    .bi-card-header h3 {
+        margin: 0 !important;
+        font-size: 1.25rem !important;
+        font-weight: 600 !important;
+    }
+
+    .bi-badge {
+        background: rgba(255, 255, 255, 0.2) !important;
+        padding: 4px 8px !important;
+        border-radius: 20px !important;
+        font-size: 0.75rem !important;
+        font-weight: bold !important;
+        text-transform: uppercase !important;
+        letter-spacing: 0.5px !important;
+    }
+
+    .bi-card-body {
+        padding: 25px !important;
+        flex-grow: 1 !important;
+        display: flex !important;
+        flex-direction: column !important;
+    }
+
+    .bi-purpose {
+        font-size: 0.95rem !important;
+        line-height: 1.5 !important;
+        margin-bottom: 15px !important;
+        padding-bottom: 12px !important;
+        border-bottom: 1px solid #e2e8f0 !important;
+    }
+
+    /* RESETEO AGRESIVO: Mata cualquier estilo de lista previo en tu app */
+    .bi-list {
+        list-style-type: none !important;
+        list-style: none !important;
+        padding: 0 !important;
+        margin: 0 !important;
+    }
+
+    .bi-list li {
+        font-size: 0.9rem !important;
+        line-height: 1.6 !important;
+        margin-bottom: 12px !important;
+        position: relative !important;
+        padding-left: 20px !important;
+        list-style: none !important;
+    }
+
+    /* Desactiva cualquier icono o viñeta que herede de librerías externas */
+    .bi-list li::before {
+        content: "•" !important;
+        font-family: inherit !important;
+        position: absolute !important;
+        left: 0 !important;
+        color: #94a3b8 !important;
+        font-weight: bold !important;
+        font-size: 1.2rem !important;
+        background: none !important;
+        display: inline-block !important;
+    }
+</style>

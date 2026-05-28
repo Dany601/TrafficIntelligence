@@ -146,7 +146,90 @@ def fig_to_base64(plt_obj):
     data = base64.b64encode(buf.getvalue()).decode('utf-8')
     buf.close()
     return data
-
+def obtener_resultados():
+    try:
+        print("LOG: Procesando resultados con pandas...")
+        headers = {'User-Agent': 'Mozilla/5.0'}
+        response = requests.get(URL_GITHUB, headers=headers, timeout=20)
+        response.raise_for_status()
+ 
+        try:
+            pdf = pd.read_csv(io.StringIO(response.text), delimiter=';', on_bad_lines='skip', low_memory=False)
+        except Exception:
+            pdf = pd.read_csv(io.StringIO(response.text), on_bad_lines='skip', low_memory=False)
+ 
+        pdf.columns = [c.strip() for c in pdf.columns]
+        print(f"LOG: CSV cargado {len(pdf)} filas, {len(pdf.columns)} columnas")
+ 
+        cant_cols = [c for c in pdf.columns if c.lower().startswith('cant')]
+        for c in cant_cols:
+            pdf[c] = pd.to_numeric(pdf[c], errors='coerce').fillna(0).astype(int)
+ 
+        incidentes_localidad = []
+        if 'Localidad' in pdf.columns:
+            g_local = pdf.groupby('Localidad').size().reset_index(name='total_incidentes')
+            if cant_cols:
+                g_her = pdf.groupby('Localidad')[cant_cols].sum().reset_index()
+                g_her['total_heridos'] = g_her[cant_cols].sum(axis=1)
+                g_local = g_local.merge(g_her[['Localidad', 'total_heridos']], on='Localidad', how='left')
+                g_local['total_heridos'] = g_local['total_heridos'].fillna(0).astype(int)
+            else:
+                g_local['total_heridos'] = 0
+            g_local = g_local.sort_values('total_incidentes', ascending=False)
+            incidentes_localidad = g_local.to_dict(orient='records')
+ 
+        incidentes_vehiculo = []
+        tipo_cols = [c for c in pdf.columns if 'tipo implic' in c.lower() or 'tipo implicado' in c.lower()]
+        if not tipo_cols:
+            tipo_cols = [c for c in pdf.columns if c.lower().startswith('tipo') and 'implic' in c.lower()]
+ 
+        veh_rows = []
+        for i, tipo_col in enumerate(tipo_cols):
+            if tipo_col not in pdf.columns:
+                continue
+            cant_col = cant_cols[i] if i < len(cant_cols) else None
+            if cant_col and cant_col in pdf.columns:
+                tmp = pdf[[tipo_col, cant_col]].dropna(subset=[tipo_col])
+                tmp = tmp.rename(columns={tipo_col: 'TipoVehiculo', cant_col: 'count'})
+            else:
+                tmp = pdf[[tipo_col]].dropna(subset=[tipo_col])
+                tmp = tmp.rename(columns={tipo_col: 'TipoVehiculo'})
+                tmp['count'] = 1
+            tmp['TipoVehiculo'] = tmp['TipoVehiculo'].astype(str).str.strip()
+            agg = tmp.groupby('TipoVehiculo')['count'].sum().reset_index().rename(columns={'count': 'total_incidentes'})
+            veh_rows.append(agg)
+ 
+        if veh_rows:
+            veh_df = pd.concat(veh_rows, axis=0, ignore_index=True)
+            veh_df = veh_df.groupby('TipoVehiculo')['total_incidentes'].sum().reset_index()
+            veh_df = veh_df.sort_values('total_incidentes', ascending=False)
+            incidentes_vehiculo = veh_df.to_dict(orient='records')
+ 
+        incidentes_clima = []
+        clima_col = None
+        for c in pdf.columns:
+            if 'clima' in c.lower() or 'condicion' in c.lower() or 'weather' in c.lower():
+                clima_col = c
+                break
+        if clima_col:
+            clima_df = pdf.groupby(clima_col).size().reset_index(name='total_incidentes')
+            clima_df = clima_df.sort_values('total_incidentes', ascending=False)
+            clima_df = clima_df.rename(columns={clima_col: 'CondicionClimatica'})
+            incidentes_clima = clima_df.to_dict(orient='records')
+ 
+        return {
+            'incidentes_localidad': incidentes_localidad,
+            'incidentes_vehiculo': incidentes_vehiculo,
+            'incidentes_clima': incidentes_clima
+        }
+    except Exception as e:
+        print(f"LOG: obtener_resultados error: {e}")
+        return {
+            'incidentes_localidad': [],
+            'incidentes_vehiculo': [],
+            'incidentes_clima': []
+        }
+ 
 def procesar_dashboard(k_usuario):
     global wcss_cache
     df_clean = obtener_datos()
